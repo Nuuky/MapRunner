@@ -135,7 +135,7 @@ canvas.height = 600;
 var Game = new _objects2.default.Game(c);
 Game.assets.tiles = _tiles2.default;
 Game.select.tile = Game.assets.tiles.landscape;
-Game.cfg.scale = 32;
+Game.cfg.scale = 64;
 Game.cfg.cols = 32;
 Game.cfg.rows = 32;
 Game.translate.y = -(Game.cfg.rows * Game.cfg.scale) + canvas.height;
@@ -145,7 +145,7 @@ for (var t in Game.assets.tiles) {
 }
 
 // Player
-var Player = new _objects2.default.Player(c, Game, 11, 19, 32, 32, 'James');
+var Player = new _objects2.default.Player(c, Game, 11, 19, 64, 64, 'James');
 
 // Toolbar
 var elUI = (0, _toolbar2.default)(Game);
