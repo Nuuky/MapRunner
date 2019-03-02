@@ -135,17 +135,18 @@ canvas.height = 600;
 var Game = new _objects2.default.Game(c);
 Game.assets.tiles = _tiles2.default;
 Game.select.tile = Game.assets.tiles.landscape;
-Game.cfg.scale = 32;
+Game.cfg.scale = 64;
 Game.cfg.cols = 32;
 Game.cfg.rows = 32;
 Game.translate.y = -(Game.cfg.rows * Game.cfg.scale) + canvas.height;
+// Game.engine = new Engine()
 // Load tiles IMG
 for (var t in Game.assets.tiles) {
     _utils2.default.loadTiles(Game.assets.tiles[t]);
 }
 
 // Player
-var Player = new _objects2.default.Player(c, Game, 11, 19, 32, 32, 'James');
+var Player = new _objects2.default.Player(c, Game, 11, 19, 64, 64, 'James');
 
 // Toolbar
 var elUI = (0, _toolbar2.default)(Game);
@@ -175,7 +176,7 @@ Game.init = function () {
                     var obj = new _objects2.default[Game.map[_row][_col].type](c, _col, _row);
                     Game.map[_row][_col] = Object.assign(obj, Game.map[_row][_col]);
                 } else {
-                    Game.map[_row][_col] = new _objects2.default.Rectangle(c, _col, _row);
+                    // Game.map[row][col] = new Objects.Rectangle(c, col, row);
                 }
             }
         }
@@ -208,6 +209,11 @@ var displayInfo = function displayInfo() {
     c.closePath();
 };
 
+var mapWidth = Game.cfg.cols * Game.cfg.scale,
+    mapHeight = Game.cfg.rows * Game.cfg.scale,
+    halfMapWidth = mapWidth - canvas.width,
+    halfMapHeight = mapHeight - canvas.height;
+
 // Animation Loop
 Game.animate = function () {
     if (Game.playing[0]) requestAnimationFrame(Game.animate);
@@ -215,15 +221,45 @@ Game.animate = function () {
     delta = now - then;
 
     if (delta > interval) {
+
+        var separator = ' ';
+        for (var i = 0; i < 52 - counter.toString().length; i++) {
+            separator += '-';
+        }
+        // console.log('\n\n' + counter + separator)
+
         then = now - delta % interval;
+
+        // console.time('frame')
         Game.cfg.updateAll = true;
         c.clearRect(0, 0, canvas.width, canvas.height); // if (Game.cfg.updateAll)
+
+        c.beginPath();
+        c.rect(0, 0, canvas.width, canvas.height);
+        c.fillStyle = 'cyan';
+        c.fill();
+        c.closePath();
+
         c.save();
         c.translate(Game.translate.x, Game.translate.y);
 
         Game.update(canvas, Player);
 
         Player.update();
+        // console.timeEnd('frame')
+
+        // Camera
+
+
+        var tx = -Player.getHalfWidth() + canvas.width / 2,
+            ty = -Player.getHalfHeight() + canvas.height / 2;
+
+        if (Player.getHalfWidth() <= canvas.width / 2) tx = 0;else if (Player.getHalfWidth() >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
+        if (Player.getHalfHeight() <= canvas.height / 2) ty = 0;
+        if (Player.getHalfHeight() >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
+
+        Game.translate.x = tx;
+        Game.translate.y = ty;
 
         c.restore();
 
@@ -526,13 +562,21 @@ module.exports = function (ctx) {
       var tX = _this.translate.x;
       var tY = _this.translate.y;
 
-      var canvasCols = Math.ceil(canvas.width / scale);
-      var canvasRows = Math.ceil(canvas.height / scale);
-      var xStart = Math.floor(tX / scale * -1) > 0 ? Math.floor(tX / scale * -1) : 0;
-      var yStart = Math.floor(tY / scale * -1) > 0 ? Math.floor(tY / scale * -1) : 0;
+      // const canvasCols = Math.ceil(canvas.width / scale)
+      // const canvasRows = Math.ceil(canvas.height / scale)
+      // const xStart = (Math.floor((tX / scale) * -1) > 0) ? Math.floor((tX / scale) * -1) : 0
+      // const yStart = (Math.floor((tY / scale) * -1) > 0) ? Math.floor((tY / scale) * -1) : 0
 
-      for (var y = yStart; y < canvasRows + yStart + 1; y++) {
-        for (var x = xStart; x < canvasCols + xStart + 1; x++) {
+      // for(let y = yStart; y < canvasRows + yStart+1; y++) {
+      //   for(let x = xStart; x < canvasCols + xStart+1; x++) {
+      //     if(!this.map[y]) continue
+      //     if(!this.map[y][x]) continue
+      //     this.map[y][x].draw(this)
+      //     //if(this.map[y][x].collision && p) p.check(this, this.map[y][x])
+      //   }
+      // }
+      for (var y = 0; y < _this.map.length; y++) {
+        for (var x = 0; x < _this.map[0].length; x++) {
           if (!_this.map[y]) continue;
           if (!_this.map[y][x]) continue;
           _this.map[y][x].draw(_this);
@@ -575,7 +619,7 @@ module.exports = function (c, game, x, y, w, h) {
   var name = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 'Tom';
 
   this.type = 'Player';
-  this.color = 'blue';
+  this.color = 'brown';
   this.name = name;
 
   this.w = w;
@@ -588,11 +632,35 @@ module.exports = function (c, game, x, y, w, h) {
   this.dx = 0;
   this.dy = 0;
   this.accel = 0.5;
-  this.maxSpeed = 6;
+  this.maxSpeed = 10;
   this.jumpForce = 0;
   this.vel = 0;
   this.mass = 1;
   this.gravity = this.mass * 0.98;
+
+  this.getLeft = function () {
+    return _this.x;
+  };
+
+  this.getRight = function () {
+    return _this.x + _this.w;
+  };
+
+  this.getTop = function () {
+    return _this.y;
+  };
+
+  this.getBottom = function () {
+    return _this.y + _this.h;
+  };
+
+  this.getHalfWidth = function () {
+    return _this.x + _this.w / 2;
+  };
+
+  this.getHalfHeight = function () {
+    return _this.y + _this.h / 2;
+  };
 
   this.isOnFloor = false;
 
@@ -619,7 +687,7 @@ module.exports = function (c, game, x, y, w, h) {
 
   this.jump = function () {
     if (!_this.isOnFloor) return;
-    _this.dy = -4 * 3;
+    _this.dy = -16;
     _this.isOnFloor = false;
   };
 
@@ -722,7 +790,7 @@ module.exports = function (c, game, x, y, w, h) {
 
     var speed = Math.sqrt(dx * dx + dy * dy);
 
-    game.map[cy][cx].strokeStyle = 'red';
+    //game.map[cy][cx].strokeStyle = 'red'
 
     if (dy > 0) this.isOnFloor = false;
 
@@ -766,25 +834,25 @@ module.exports = function (c, game, x, y, w, h) {
       this.y = (cy + 1) * scale - ph;
       this.dy = dy = 0;
       this.isOnFloor = true;
-      console.log('>> Down');
+      // console.log('>> Down')
     }
 
     if (dy < 0 && (isCollidingTop || !isCollidingTop && isCollidingTopLeft && !isCollidingLeft || !isCollidingTop && isCollidingTopRight && !isCollidingRight)) {
       this.y = (cy - 1) * scale + ph;
       this.dy = dy = 0;
-      console.log('>> Top');
+      // console.log('>> Top')
     }
 
     if (dx < 0 && isCollidingLeft) {
       this.x = (cx - 1) * scale + pw;
       this.dx = dx = 0;
-      console.log('>> Left');
+      // console.log('>> Left')
     }
 
     if (dx > 0 && isCollidingRight) {
       this.x = (cx + 1) * scale - pw;
       this.dx = dx = 0;
-      console.log('>> Right');
+      // console.log('>> Right')
     }
 
     this.x += dx;
@@ -813,54 +881,74 @@ var _tilesManager2 = _interopRequireDefault(_tilesManager);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 module.exports = function (c, x, y) {
-    this.type = 'Rectangle';
-    this.x = x;
-    this.y = y;
-    this.color = 'white';
-    this.strokeStyle = 'gray';
-    this.empty = true;
-    this.tile = null;
-    this.collision = false;
+  var _this = this;
 
-    this.draw = function (game) {
-        if (!this.tile) {
-            c.beginPath();
-            c.rect(this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
-            c.fillStyle = this.color;
-            c.fill();
-            c.strokeStyle = this.strokeStyle;
-            c.stroke();
-            c.closePath();
+  this.type = 'Rectangle';
+  this.x = x;
+  this.y = y;
+  this.w = 32;
+  this.h = 32;
+  this.color = 'white';
+  this.strokeStyle = 'gray';
+  this.empty = true;
+  this.tile = null;
+  this.collision = false;
 
-            this.strokeStyle = 'gray';
-        } else {
-            c.beginPath();
-            c.drawImage(game.assets.tiles[this.tile.name].img, this.tile.x, this.tile.y, game.assets.tiles[this.tile.name].size, game.assets.tiles[this.tile.name].size, this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
-            c.closePath();
-        }
-    };
+  this.getLeft = function () {
+    return _this.x;
+  };
 
-    this.update = function (game) {
-        if (this.tile) {
-            this.collision = this.tile.value < 255 ? true : false;
-            var v = _tilesManager2.default.getID(this.tile.value);
-            this.tile.id = v === 0 ? 0 : v - 1;
+  this.getTop = function () {
+    return _this.y;
+  };
 
-            var _x = this.tile.id % game.assets.tiles[this.tile.name].w;
-            var _y = Math.floor(this.tile.id / game.assets.tiles[this.tile.name].w);
+  this.getRight = function () {
+    return _this.x + _this.w;
+  };
 
-            this.tile.x = _x * game.assets.tiles[this.tile.name].size + _x * game.assets.tiles[this.tile.name].iX;
-            this.tile.y = _y * game.assets.tiles[this.tile.name].size + _y * game.assets.tiles[this.tile.name].iY;
-        }
-    };
+  this.getBottom = function () {
+    return _this.y + _this.h;
+  };
 
-    this.check = function (g, p) {
-        if (!this.collision) return;
+  this.draw = function (game) {
+    if (!this.tile) {
+      c.beginPath();
+      c.rect(this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
+      c.fillStyle = this.color;
+      c.fill();
+      c.strokeStyle = this.strokeStyle;
+      c.stroke();
+      c.closePath();
 
-        if (p.x > this.x && p.x < this.x + g.cfg.scale && p.y > this.y && p.y < this.y + g.cfg.scale) {
-            p.x = this.x - p.w;
-        }
-    };
+      this.strokeStyle = 'gray';
+    } else {
+      c.beginPath();
+      c.drawImage(game.assets.tiles[this.tile.name].img, this.tile.x, this.tile.y, game.assets.tiles[this.tile.name].size, game.assets.tiles[this.tile.name].size, this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
+      c.closePath();
+    }
+  };
+
+  this.update = function (game) {
+    if (this.tile) {
+      this.collision = this.tile.value < 255 ? true : false;
+      var v = _tilesManager2.default.getID(this.tile.value);
+      this.tile.id = v === 0 ? 0 : v - 1;
+
+      var _x = this.tile.id % game.assets.tiles[this.tile.name].w;
+      var _y = Math.floor(this.tile.id / game.assets.tiles[this.tile.name].w);
+
+      this.tile.x = _x * game.assets.tiles[this.tile.name].size + _x * game.assets.tiles[this.tile.name].iX;
+      this.tile.y = _y * game.assets.tiles[this.tile.name].size + _y * game.assets.tiles[this.tile.name].iY;
+    }
+  };
+
+  this.check = function (g, p) {
+    if (!this.collision) return;
+
+    if (p.x > this.x && p.x < this.x + g.cfg.scale && p.y > this.y && p.y < this.y + g.cfg.scale) {
+      p.x = this.x - p.w;
+    }
+  };
 };
 
 /***/ }),
@@ -1156,7 +1244,7 @@ module.exports = {
   },
 
   getBlock: function getBlock(arr, x, y) {
-    if (!arr[y]) return true;else if (arr[y] && !arr[y][x]) return true;else if (!arr[y][x].collision) return false;else return true;
+    if (!arr[y]) return false;else if (arr[y] && !arr[y][x]) return false;else if (!arr[y][x].collision) return false;else return true;
   }
 
   /*
