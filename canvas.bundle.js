@@ -128,8 +128,8 @@ var c = canvas.getContext('2d');
 canvas.oncontextmenu = function (e) {
     return e.preventDefault();
 };
-canvas.width = 800;
-canvas.height = 600;
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
 // Game
 var Game = new _objects2.default.Game(c);
@@ -176,7 +176,7 @@ Game.init = function () {
                     var obj = new _objects2.default[Game.map[_row][_col].type](c, _col, _row);
                     Game.map[_row][_col] = Object.assign(obj, Game.map[_row][_col]);
                 } else {
-                    // Game.map[row][col] = new Objects.Rectangle(c, col, row);
+                    Game.map[_row][_col] = new _objects2.default.Rectangle(c, _col, _row);
                 }
             }
         }
@@ -212,7 +212,15 @@ var displayInfo = function displayInfo() {
 var mapWidth = Game.cfg.cols * Game.cfg.scale,
     mapHeight = Game.cfg.rows * Game.cfg.scale,
     halfMapWidth = mapWidth - canvas.width,
-    halfMapHeight = mapHeight - canvas.height;
+    halfMapHeight = mapHeight - canvas.height,
+    imgHorizontal = mapWidth > mapHeight ? true : false,
+    imgWidth = imgHorizontal ? mapWidth : mapHeight / 1080 * 1920,
+    imgHeight = !imgHorizontal ? mapHeight : mapWidth / 1920 * 1080,
+    background = new Image(mapWidth, mapHeight);
+background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
+
+var imgOffx = 0,
+    imgOffy = 0;
 
 // Animation Loop
 Game.animate = function () {
@@ -235,9 +243,10 @@ Game.animate = function () {
         c.clearRect(0, 0, canvas.width, canvas.height); // if (Game.cfg.updateAll)
 
         c.beginPath();
-        c.rect(0, 0, canvas.width, canvas.height);
-        c.fillStyle = 'cyan';
-        c.fill();
+        // c.rect(0, 0, canvas.width, canvas.height)
+        // c.fillStyle = 'cyan'
+        // c.fill()
+        c.drawImage(background, Game.translate.x - imgOffx / 20, Game.translate.y - imgOffy / 20, imgWidth, imgHeight);
         c.closePath();
 
         c.save();
@@ -246,17 +255,22 @@ Game.animate = function () {
         Game.update(canvas, Player);
 
         Player.update();
+        imgOffx += Player.dx;
+        imgOffy += Player.dy;
         // console.timeEnd('frame')
 
         // Camera
 
 
         var tx = -Player.getHalfWidth() + canvas.width / 2,
-            ty = -Player.getHalfHeight() + canvas.height / 2;
+            ty = -Player.getHalfHeight() + canvas.height / 2,
+            isOffsetX = canvas.width < mapWidth ? true : false,
+            isOffsetY = canvas.height < mapHeight ? true : false;
 
-        if (Player.getHalfWidth() <= canvas.width / 2) tx = 0;else if (Player.getHalfWidth() >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
-        if (Player.getHalfHeight() <= canvas.height / 2) ty = 0;
-        if (Player.getHalfHeight() >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
+        if (!isOffsetX) tx = canvas.width / 2 - mapWidth / 2;
+        if (!isOffsetY) ty = canvas.height / 2 - mapHeight / 2;
+        if (isOffsetX && Player.getHalfWidth() <= canvas.width / 2) tx = 0;else if (isOffsetX && Player.getHalfWidth() >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
+        if (isOffsetY && Player.getHalfHeight() <= canvas.height / 2) ty = 0;else if (isOffsetY && Player.getHalfHeight() >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
 
         Game.translate.x = tx;
         Game.translate.y = ty;
@@ -912,15 +926,15 @@ module.exports = function (c, x, y) {
 
   this.draw = function (game) {
     if (!this.tile) {
-      c.beginPath();
-      c.rect(this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
-      c.fillStyle = this.color;
-      c.fill();
-      c.strokeStyle = this.strokeStyle;
-      c.stroke();
-      c.closePath();
+      // c.beginPath()
+      // c.rect(this.x*game.cfg.scale, this.y*game.cfg.scale, game.cfg.scale, game.cfg.scale)
+      // c.fillStyle = this.color
+      // c.fill()
+      // c.strokeStyle = this.strokeStyle
+      // c.stroke()
+      // c.closePath()
 
-      this.strokeStyle = 'gray';
+      // this.strokeStyle = 'gray'
     } else {
       c.beginPath();
       c.drawImage(game.assets.tiles[this.tile.name].img, this.tile.x, this.tile.y, game.assets.tiles[this.tile.name].size, game.assets.tiles[this.tile.name].size, this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
@@ -929,6 +943,9 @@ module.exports = function (c, x, y) {
   };
 
   this.update = function (game) {
+    this.w = game.cfg.scale;
+    this.h = game.cfg.scale;
+
     if (this.tile) {
       this.collision = this.tile.value < 255 ? true : false;
       var v = _tilesManager2.default.getID(this.tile.value);
