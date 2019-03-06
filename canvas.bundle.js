@@ -515,8 +515,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Game = function () {
   function Game(canvas) {
-    var _this2 = this;
-
     _classCallCheck(this, Game);
 
     this.canvas = canvas;
@@ -609,14 +607,6 @@ var Game = function () {
         c.closePath();
       }
     };
-
-    var events = ["mousedown", "mousemove", "mouseup"];
-    if ("ontouchstart" in window) {
-      events = events.concat("touchstart", "touchmove", "touchend");
-    }
-    events.forEach(function (evt) {
-      return _this2.canvas.addEventListener(evt, _this2, false);
-    });
   }
 
   _createClass(Game, [{
@@ -666,6 +656,26 @@ var Game = function () {
       }
     }
   }, {
+    key: 'event',
+    value: function event(action) {
+      var _this2 = this;
+
+      var events = ["mousedown", "mousemove", "mouseup", "keyup", "keydown"];
+      if ("ontouchstart" in window) {
+        events = events.concat("touchstart", "touchmove", "touchend");
+      }
+
+      if (action === 'start') {
+        events.forEach(function (evt) {
+          return _this2.canvas.addEventListener(evt, _this2, false);
+        });
+      } else if (action === 'end') {
+        events.forEach(function (evt) {
+          return _this2.canvas.removeEventListener(evt, _this2, false);
+        });
+      }
+    }
+  }, {
     key: 'handleEvent',
     value: function handleEvent(evt) {
       var handler = 'on' + evt.type;
@@ -681,6 +691,7 @@ var Game = function () {
     key: 'onmousedown',
     value: function onmousedown(evt) {
       console.log(evt);
+      this.checkForClicks();
       // this.startDrawingAt({x: evt.clientX, y: evt.clientY});
     }
   }, {
@@ -694,6 +705,7 @@ var Game = function () {
   }, {
     key: 'onmousemove',
     value: function onmousemove(evt) {
+      this.checkForClicks();
       // this.continueDrawingTo({x: evt.clientX, y: evt.clientY});
     }
   }, {
@@ -1324,11 +1336,21 @@ module.exports = function () {
         case 'LEFT':
           if (obj.dx < -half) {
             if (isColliding(this, obj, true, false)) {
+              if (this.game.map[this.y][this.x + 1].collision) {
+                obj.dx = 0;
+                obj.y = this.getTop() - obj.h;
+                break;
+              }
               obj.dx = 0;
               obj.x = this.getRight();
             }
           } else {
             if (isColliding(this, obj, true, false)) {
+              if (this.game.map[this.y][this.x - 1].collision) {
+                obj.dx = 0;
+                obj.y = this.getTop() - obj.h;
+                break;
+              }
               obj.dx = 0;
               obj.x = this.getLeft() - obj.w;
             }
@@ -1338,11 +1360,21 @@ module.exports = function () {
         case 'RIGHT':
           if (obj.dx >= half) {
             if (isColliding(this, obj, true, false)) {
+              if (this.game.map[this.y][this.x - 1].collision) {
+                obj.dx = 0;
+                obj.y = this.getTop() - obj.h;
+                break;
+              }
               obj.dx = 0;
               obj.x = this.getLeft() - obj.w;
             }
           } else {
             if (isColliding(this, obj, true, false)) {
+              if (this.game.map[this.y][this.x + 1].collision) {
+                obj.dx = 0;
+                obj.y = this.getTop() - obj.h;
+                break;
+              }
               obj.dx = 0;
               obj.x = this.getRight();
             }
