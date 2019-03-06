@@ -108,10 +108,6 @@ var _playerListeners = __webpack_require__(/*! ./playerListeners */ "./src/playe
 
 var _playerListeners2 = _interopRequireDefault(_playerListeners);
 
-var _utils = __webpack_require__(/*! ./utils */ "./src/utils.js");
-
-var _utils2 = _interopRequireDefault(_utils);
-
 var _objects = __webpack_require__(/*! ./objects */ "./src/objects.js");
 
 var _objects2 = _interopRequireDefault(_objects);
@@ -120,19 +116,28 @@ var _tiles = __webpack_require__(/*! ./json/tiles */ "./src/json/tiles.json");
 
 var _tiles2 = _interopRequireDefault(_tiles);
 
+var _engine = __webpack_require__(/*! ./engine */ "./src/engine.js");
+
+var _engine2 = _interopRequireDefault(_engine);
+
+var _game = __webpack_require__(/*! ./game */ "./src/game.js");
+
+var _game2 = _interopRequireDefault(_game);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var gameDiv = document.getElementById('game');
 var canvas = document.getElementById('canvas');
-var c = canvas.getContext('2d');
 canvas.oncontextmenu = function (e) {
     return e.preventDefault();
 };
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+canvas.width = innerWidth - 50;
+canvas.height = innerHeight - 50;
 
 // Game
-var Game = new _objects2.default.Game(c);
+var Game = new _game2.default(canvas);
+var c = Game.c;
+
 Game.assets.tiles = _tiles2.default;
 Game.select.tile = Game.assets.tiles.landscape;
 Game.cfg.scale = 64;
@@ -142,11 +147,13 @@ Game.translate.y = -(Game.cfg.rows * Game.cfg.scale) + canvas.height;
 // Game.engine = new Engine()
 // Load tiles IMG
 for (var t in Game.assets.tiles) {
-    _utils2.default.loadTiles(Game.assets.tiles[t]);
+    Game.utils.loadTiles(Game.assets.tiles[t]);
 }
 
+Game.Engine = new _engine2.default(c, Game.cfg.cols, Game.cfg.rows, Game.cfg.scale);
+
 // Player
-var Player = new _objects2.default.Player(c, Game, 11, 19, 64, 64, 'James');
+var Player = new _objects2.default.Player(3, 27, 'James', Game); // x, y, w, h, name, Game)
 
 // Toolbar
 var elUI = (0, _toolbar2.default)(Game);
@@ -156,8 +163,8 @@ elUI = null;
 // Implementation
 Game.init = function () {
     // Listeners
-    (0, _gameListeners2.default)(canvas, Game);
-    (0, _playerListeners2.default)(Player, Game);
+    if (Game.editor) (0, _gameListeners2.default)(canvas, Game);
+    if (!Game.editor) (0, _playerListeners2.default)(Player, Game);
 
     Game.map = __webpack_require__(/*! ./json/map */ "./src/json/map.json");
 
@@ -166,18 +173,26 @@ Game.init = function () {
         for (var row = 0; row < Game.cfg.rows; row++) {
             Game.map[row] = [];
             for (var col = 0; col < Game.cfg.cols; col++) {
-                Game.map[row][col] = new _objects2.default.Rectangle(c, col, row);
+                Game.map[row][col] = new Game.Objects.Box(col, row, Game);
             }
         }
     } else {
+        var bouncingCalls = [9, 10, 11];
+
         for (var _row = 0; _row < Game.map.length; _row++) {
             for (var _col = 0; _col < Game.map[0].length; _col++) {
                 if (Game.map[_row][_col]) {
-                    var obj = new _objects2.default[Game.map[_row][_col].type](c, _col, _row);
+                    var obj = new Game.Objects[Game.map[_row][_col].type](_col, _row, Game);
                     Game.map[_row][_col] = Object.assign(obj, Game.map[_row][_col]);
-                } else {
-                    Game.map[_row][_col] = new _objects2.default.Rectangle(c, _col, _row);
                 }
+                // else if(row === 23 && bouncingCalls.includes(col)) {
+                //     let obj = new Game.Objects.BouncingBox(col, row, Game) // x, y, w, h, Game
+                //     Game.map[row][col] = Object.assign(obj, Game.map[row][col]);
+                //     console.log(Game.map[row][col])
+                // }
+                else {
+                        if (Game.editor) Game.map[_row][_col] = new Game.Objects.Box(_col, _row, Game);
+                    }
             }
         }
     }
@@ -190,7 +205,7 @@ var fps = 60,
     now = void 0,
     then = Date.now(),
     delta = void 0,
-    counter = 0;
+    counter = fps;
 var interval = 1000 / fps,
     first = then;
 var displayInfo = function displayInfo() {
@@ -202,7 +217,7 @@ var displayInfo = function displayInfo() {
     c.fillRect(canvas.width - 80, 0, 100, 40);
     c.fillStyle = "white";
     c.font = "11px Arial";
-    c.fillText('ZOOM: x' + (Game.cfg.scale / 32).toFixed(2), canvas.width - 75, 15);
+    if (Game.editor) c.fillText('ZOOM: x' + (Game.cfg.scale / 64).toFixed(2), canvas.width - 75, 15);
     c.fillText('FPS: ' + Math.round(counter / time_el), canvas.width - 75, 30);
     c.rect(0, 0, canvas.width, canvas.height);
     c.stroke();
@@ -214,13 +229,10 @@ var mapWidth = Game.cfg.cols * Game.cfg.scale,
     halfMapWidth = mapWidth - canvas.width,
     halfMapHeight = mapHeight - canvas.height,
     imgHorizontal = mapWidth > mapHeight ? true : false,
-    imgWidth = imgHorizontal ? mapWidth : mapHeight / 1080 * 1920,
-    imgHeight = !imgHorizontal ? mapHeight : mapWidth / 1920 * 1080,
+    imgWidth = imgHorizontal ? mapWidth : mapWidth / 1080 * 1920,
+    imgHeight = !imgHorizontal ? mapHeight : mapHeight / 1920 * 1080,
     background = new Image(mapWidth, mapHeight);
 background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
-
-var imgOffx = 0,
-    imgOffy = 0;
 
 // Animation Loop
 Game.animate = function () {
@@ -229,57 +241,660 @@ Game.animate = function () {
     delta = now - then;
 
     if (delta > interval) {
+        // console.time('check')
+
+        // Camera
+        if (!Game.editor) {
+            var tx = -Player.getHalfWidth() + canvas.width / 2,
+                ty = -Player.getHalfHeight() + canvas.height / 2,
+                isOffsetX = canvas.width < mapWidth ? true : false,
+                isOffsetY = canvas.height < mapHeight ? true : false;
+
+            if (!isOffsetX) tx = canvas.width / 2 - mapWidth / 2;
+            if (!isOffsetY) ty = canvas.height / 2 - mapHeight / 2;
+            if (isOffsetX && Player.getHalfWidth() <= canvas.width / 2) tx = 0;else if (isOffsetX && Player.getHalfWidth() >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
+            if (isOffsetY && Player.getHalfHeight() <= canvas.height / 2) ty = 0;else if (isOffsetY && Player.getHalfHeight() >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
+
+            if (!Player.isDead) {
+                Game.translate.x = tx;
+                Game.translate.y = ty;
+            } else {
+                // console.log('Player is dead !')
+                // If Camera POS === Player Respawn POS
+                if (Game.translate.x == tx && Game.translate.y == ty) {
+                    Player.spawn();
+                } else {
+                    // console.log(Game.translate.x, tx, ' -- ', Game.translate.y, ty)
+                    Game.translate.x = Game.utils.lerp(Game.translate.x, tx, 0.2);
+                    Game.translate.y = Game.utils.lerp(Game.translate.y, ty, 0.2);
+                }
+            }
+        }
+
+        if (!Game.editor) Game.Engine.create();
+
+        then = now - delta % interval;
+
+        if (Game.cfg.updateAll) c.clearRect(0, 0, canvas.width, canvas.height); // if (Game.cfg.updateAll)
+
+        if (!Game.editor) {
+            Game.cfg.updateAll = true;
+            c.beginPath();
+            c.drawImage(background, Game.translate.x, Game.translate.y, imgWidth, imgHeight);
+            c.closePath();
+        }
+
+        c.save();
+        c.translate(Game.translate.x, Game.translate.y);
+
+        Game.update(canvas);
+
+        if (!Game.editor) {
+            if (!Player.isDead) Player.actions();
+            Game.Engine.insert(Player);
+            Game.Engine.checkCells();
+            Player.update();
+        }
+
+        c.restore();
+
+        displayInfo();
+
+        //Game.message.error('Test')
 
         var separator = ' ';
         for (var i = 0; i < 52 - counter.toString().length; i++) {
             separator += '-';
         }
         // console.log('\n\n' + counter + separator)
-
-        then = now - delta % interval;
-
-        // console.time('frame')
-        Game.cfg.updateAll = true;
-        c.clearRect(0, 0, canvas.width, canvas.height); // if (Game.cfg.updateAll)
-
-        c.beginPath();
-        // c.rect(0, 0, canvas.width, canvas.height)
-        // c.fillStyle = 'cyan'
-        // c.fill()
-        c.drawImage(background, Game.translate.x - imgOffx / 20, Game.translate.y - imgOffy / 20, imgWidth, imgHeight);
-        c.closePath();
-
-        c.save();
-        c.translate(Game.translate.x, Game.translate.y);
-
-        Game.update(canvas, Player);
-
-        Player.update();
-        imgOffx += Player.dx;
-        imgOffy += Player.dy;
-        // console.timeEnd('frame')
-
-        // Camera
-
-
-        var tx = -Player.getHalfWidth() + canvas.width / 2,
-            ty = -Player.getHalfHeight() + canvas.height / 2,
-            isOffsetX = canvas.width < mapWidth ? true : false,
-            isOffsetY = canvas.height < mapHeight ? true : false;
-
-        if (!isOffsetX) tx = canvas.width / 2 - mapWidth / 2;
-        if (!isOffsetY) ty = canvas.height / 2 - mapHeight / 2;
-        if (isOffsetX && Player.getHalfWidth() <= canvas.width / 2) tx = 0;else if (isOffsetX && Player.getHalfWidth() >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
-        if (isOffsetY && Player.getHalfHeight() <= canvas.height / 2) ty = 0;else if (isOffsetY && Player.getHalfHeight() >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
-
-        Game.translate.x = tx;
-        Game.translate.y = ty;
-
-        c.restore();
-
-        displayInfo();
+        // console.timeEnd('check')
     }
 };
+
+/***/ }),
+
+/***/ "./src/engine.js":
+/*!***********************!*\
+  !*** ./src/engine.js ***!
+  \***********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+module.exports = function () {
+    function Engine(c, cols, rows, scale) {
+        _classCallCheck(this, Engine);
+
+        this.c = c;
+        this.cols = cols;
+        this.rows = rows;
+        this.scale = scale;
+        this.cells = [];
+        this.done = false;
+    }
+
+    _createClass(Engine, [{
+        key: 'create',
+        value: function create() {
+            this.clear();
+            for (var i = 0; i < this.rows; i++) {
+                // this.cells[i] = new Array(this.cols)
+                this.cells[i] = [];
+                for (var j = 0; j < this.cols; j++) {
+                    this.cells[i][j] = [];
+                }
+            }
+        }
+    }, {
+        key: 'clear',
+        value: function clear() {
+            this.cells = [];
+        }
+    }, {
+        key: 'insert',
+        value: function insert(entity) {
+            var x = entity.getLeft(true),
+                y = entity.getTop(true),
+                w = entity.getRight(true),
+                h = entity.getBottom(true),
+                scale = this.scale,
+                cellStartX = Math.floor(x / scale),
+                cellEndX = Math.ceil(w / scale),
+                cellStartY = Math.floor(y / scale),
+                cellEndY = Math.ceil(h / scale);
+
+            if (entity.type === 'Player') {
+                // console.log(cellStartX, cellEndX)
+                // console.log(cellStartY, cellEndY)
+            }
+
+            for (var row = cellStartY; row < cellEndY; row++) {
+                for (var col = cellStartX; col < cellEndX; col++) {
+                    if (this.makeCell(row, col)) {
+                        this.cells[row][col].push(entity);
+                        this.done = true;
+                    }
+                }
+            }
+        }
+    }, {
+        key: 'makeCell',
+        value: function makeCell(row, col) {
+            var cells = this.cells;
+            if (!cells[row]) return false;
+            if (!cells[row][col]) this.cells[row][col] = [];
+            return true;
+        }
+    }, {
+        key: 'isColliding',
+        value: function isColliding(o1, o2) {
+            var l1 = o1.getLeft(true),
+                r1 = o1.getRight(true),
+                t1 = o1.getTop(true),
+                b1 = o1.getBottom(true),
+                l2 = o2.getLeft(true),
+                r2 = o2.getRight(true),
+                t2 = o2.getTop(true),
+                b2 = o2.getBottom(true);
+
+            if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
+                return true;
+            }
+            //console.log('in')
+            return false;
+        }
+    }, {
+        key: 'checkCells',
+        value: function checkCells() {
+            var _this = this;
+
+            this.cells.forEach(function (row) {
+                row.forEach(function (cell) {
+                    if (!cell || cell.length <= 1) return;
+                    _this.testCellEntities(cell);
+                });
+            });
+        }
+    }, {
+        key: 'testCellEntities',
+        value: function testCellEntities(cell) {
+            var _this2 = this;
+
+            // console.log(cell)
+
+            var length = cell.length;
+
+            cell.forEach(function (entity1, i) {
+                // this.c.beginPath()
+                // this.c.rect(entity1.getLeft(true), entity1.getTop(true), 64, 64)
+                // this.c.fillStyle = 'green'
+                // this.c.fill()
+                // this.c.closePath()
+
+                for (var j = i + 1; j < length; j++) {
+                    var entity2 = cell[j];
+                    if (!_this2.isColliding(entity1, entity2) || entity1 === entity2) continue; //  || (isWall1 && isWall2)
+                    _this2.resolve(entity1, entity2);
+                }
+            });
+        }
+    }, {
+        key: 'resolve',
+        value: function resolve(A, B) {
+            // console.log('in')
+            var vX = A.getHalfWidth(true) - B.getHalfWidth(true),
+                vY = A.getHalfHeight(true) - B.getHalfHeight(true),
+                ww2 = A.w / 2 + B.w / 2,
+                hh2 = A.h / 2 + B.h / 2,
+                sideA = ['TOP', 'BOTTOM', 'LEFT', 'RIGHT', 'TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_LEFT', 'BOTTOM_RIGHT'],
+                sideB = ['BOTTOM', 'TOP', 'RIGHT', 'LEFT', 'BOTTOM_RIGHT', 'BOTTOM_LEFT', 'TOP_RIGHT', 'TOP_LEFT'];
+
+            var dId = "",
+                isNegative = vX < 0 && vY < 0 ? true : false;
+
+            if (Math.abs(vX) < ww2 && Math.abs(vY) < hh2) {
+                var oX = ww2 - Math.abs(vX),
+                    oY = hh2 - Math.abs(vY);
+
+                if (oX > oY) {
+                    if (vY > 0) {
+                        dId = 0;
+                    } else {
+                        dId = 1;
+                    }
+                } else if (oX < oY) {
+                    if (vX > 0) {
+                        dId = 2;
+                    } else {
+                        dId = 3;
+                    }
+                } else {
+                    if (!isNegative && vX === vY) dId = 0;else if (!isNegative && vX < vY) dId = 0;else if (!isNegative && vX > vY) dId = 1;else if (isNegative && vX === vY) dId = 1;
+                }
+            }
+
+            // console.log(this.cells)
+
+            A.resolve(B, sideA[dId]);
+            B.resolve(A, sideB[dId]);
+        }
+    }]);
+
+    return Engine;
+}();
+
+/***/ }),
+
+/***/ "./src/game.js":
+/*!*********************!*\
+  !*** ./src/game.js ***!
+  \*********************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _tilesManager = __webpack_require__(/*! ./tilesManager */ "./src/tilesManager.js");
+
+var _tilesManager2 = _interopRequireDefault(_tilesManager);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Game = function () {
+  function Game(canvas) {
+    var _this2 = this;
+
+    _classCallCheck(this, Game);
+
+    this.canvas = canvas;
+    this.c = canvas.getContext('2d');
+
+    this.map = null;
+    this.game = this;
+
+    this.engine = undefined;
+
+    this.Objects = __webpack_require__(/*! ./objects */ "./src/objects.js");
+
+    this.utils = __webpack_require__(/*! ./utils */ "./src/utils.js");
+
+    this.cfg = {
+      name: "default",
+      cols: null,
+      rows: null,
+      scale: null,
+      updateArr: [],
+      updateAll: false,
+      gravity: 0.98
+    };
+
+    this.editor = false;
+
+    this.assets = {
+      tiles: {},
+      textures: {}
+    };
+
+    this.translate = {
+      x: 0,
+      y: 0
+    };
+
+    this.playing = [false, false], this.select = {
+      color: 'blue',
+      brushSize: 0,
+      block: this.Objects.Wall,
+      tile: this.assets.tiles.landscape
+    };
+
+    this.mouse = {
+      x: null,
+      y: null,
+      gridX: 0,
+      gridY: 0,
+      left: false,
+      right: false,
+      click: null,
+      middle: {
+        click: false,
+        x: null,
+        y: null
+      },
+      last: {
+        gridX: undefined,
+        gridY: undefined,
+        click: "nop"
+      }
+    };
+
+    this.message = {
+      game: this,
+      list: [],
+      fontSize: 35,
+      offX: 200,
+      offY: 100,
+      error: function error(msg) {
+        var _this = this.game,
+            c = _this.c,
+            canvas = _this.canvas,
+            h = this.fontSize * 1.2;
+        msg = 'Vous êtes mort !';
+
+        //const size = _this.utils.textSize(msg, 'Arial', this.fontSize, false)
+        c.font = this.fontSize + 'pt Tahoma';
+        var size = [c.measureText(msg).width, parseInt(c.font.match(/\d+/), 10) * 0.7];
+        console.log(size);
+        var textWidth = c.measureText(msg).width;
+        c.beginPath();
+        c.fillStyle = 'black';
+        c.fillRect(canvas.width / 2 - (size[0] + this.offX) / 2, canvas.height / 2 - (size[1] + this.offY) / 2, textWidth + this.offX, size[1] + this.offY);
+        c.closePath();
+
+        c.beginPath();
+        c.fillStyle = 'red';
+        c.fillText(msg, canvas.width / 2 - size[0] / 2, canvas.height / 2 + size[1] / 2);
+        c.closePath();
+      }
+    };
+
+    var events = ["mousedown", "mousemove", "mouseup"];
+    if ("ontouchstart" in window) {
+      events = events.concat("touchstart", "touchmove", "touchend");
+    }
+    events.forEach(function (evt) {
+      return _this2.canvas.addEventListener(evt, _this2, false);
+    });
+  }
+
+  _createClass(Game, [{
+    key: 'start',
+    value: function start() {}
+  }, {
+    key: 'pause',
+    value: function pause() {}
+  }, {
+    key: 'update',
+    value: function update(canvas) {
+      if (this.cfg.updateAll) {
+        var scale = this.cfg.scale;
+        var tX = this.translate.x;
+        var tY = this.translate.y;
+
+        var canvasCols = Math.ceil(canvas.width / scale);
+        var canvasRows = Math.ceil(canvas.height / scale);
+        var xStart = Math.floor(tX / scale * -1) > 0 ? Math.floor(tX / scale * -1) : 0;
+        var yStart = Math.floor(tY / scale * -1) > 0 ? Math.floor(tY / scale * -1) : 0;
+
+        for (var y = yStart; y < canvasRows + yStart + 1; y++) {
+          for (var x = xStart; x < canvasCols + xStart + 1; x++) {
+            if (!this.map[y]) continue;
+            if (!this.map[y][x]) continue;
+            this.map[y][x].update();
+            this.map[y][x].draw();
+            if (this.map[y][x].collision) this.Engine.insert(this.map[y][x]);
+          }
+        }
+        // for(let y = 0; y < this.map.length; y++) {
+        //   for(let x = 0; x < this.map[0].length; x++) {
+        //     if(!this.map[y]) continue
+        //     if(!this.map[y][x]) continue
+        //     this.map[y][x].draw(this)
+        //     if(this.map[y][x].collision) this.Engine.insert(this.map[y][x])
+        //   }
+        // }
+
+        this.cfg.updateAll = false;
+      } else if (this.cfg.updateArr.length > 0) {
+        for (var i = 0; i < this.cfg.updateArr.length; i++) {
+          this.map[this.cfg.updateArr[i].y][this.cfg.updateArr[i].x].draw(this);
+        }
+
+        this.cfg.updateArr = [];
+      }
+    }
+  }, {
+    key: 'handleEvent',
+    value: function handleEvent(evt) {
+      var handler = 'on' + evt.type;
+      if (typeof this[handler] === "function") {
+        evt.preventDefault();
+        return this[handler](evt);
+      }
+    }
+
+    // event glue
+
+  }, {
+    key: 'onmousedown',
+    value: function onmousedown(evt) {
+      console.log(evt);
+      // this.startDrawingAt({x: evt.clientX, y: evt.clientY});
+    }
+  }, {
+    key: 'ontouchstart',
+    value: function ontouchstart(evt) {
+      var touch = evt.targetTouches.item(0);
+      if (touch) {
+        // this.startDrawingAt({x: touch.clientX, y: touch.clientY});
+      }
+    }
+  }, {
+    key: 'onmousemove',
+    value: function onmousemove(evt) {
+      // this.continueDrawingTo({x: evt.clientX, y: evt.clientY});
+    }
+  }, {
+    key: 'ontouchmove',
+    value: function ontouchmove(evt) {
+      var touch = evt.targetTouches.item(0);
+      if (touch) {
+        // this.continueDrawingTo({x: touch.clientX, y: touch.clientY});
+      }
+    }
+  }, {
+    key: 'onmouseup',
+    value: function onmouseup(evt) {
+      // this.finishDrawing();
+    }
+  }, {
+    key: 'ontouchend',
+    value: function ontouchend(evt) {
+      // this.finishDrawing();
+    }
+  }]);
+
+  return Game;
+}();
+
+Game.prototype.canvasListeners = function (type) {
+  var _this3 = this;
+
+  canvas.removeEventListener('mousemove');
+  var mouse = this.mouse,
+      gridX = this.mouse.gridX,
+      gridY = this.mouse.gridY,
+      scale = this.cfg.scale,
+      canvas = this.canvas,
+      tx = this.translate.x,
+      ty = this.translate.y;
+
+  if (type === 'edit') {
+    canvas.addEventListener('mousemove', function (e) {
+      if (!_this3.playing[0] || !_this3.editor) return;
+
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+
+      mouse.gridX = Math.floor((mouse.x - tx) / scale);
+      mouse.gridY = Math.floor((mouse.y - ty) / scale);
+      if (!mouse.left && !mouse.right && !mouse.middle.click) return;
+
+      if (mouse.middle.click) _this3.checkForClicks();
+      if (gridX === mouse.last.gridX && gridY === mouse.last.gridY && mouse.click === mouse.last.click) return;
+      _this3.checkForClicks();
+    });
+
+    canvas.addEventListener('mouseleave', function (e) {
+      if (!_this3.playing[0] || !_this3.editor) return;
+
+      mouse.left = false;
+      mouse.right = false;
+      mouse.middle = {
+        click: false,
+        x: null,
+        y: null
+      };
+    });
+
+    canvas.addEventListener("wheel", function (e) {
+      if (!_this3.playing[0] || !_this3.editor) return;
+      var zoomTo = e.wheelDelta > 0 ? 4 : -4;
+
+      if (8 <= scale + zoomTo && scale + zoomTo <= 96) {
+        _this3.translate.x = mouse.x - (mouse.x - tx) / scale * (scale + zoomTo);
+        _this3.translate.y = mouse.y - (mouse.y - ty) / scale * (scale + zoomTo);
+        _this3.cfg.scale += zoomTo;
+        _this3.cfg.updateAll = true;
+      }
+    });
+
+    canvas.addEventListener('mousedown', function (e) {
+      if (!_this3.playing[0] || !_this3.editor) return;
+
+      e.preventDefault();
+
+      switch (e.button) {
+        case 0:
+          mouse.click = 'left';
+          mouse.left = true;
+          break;
+
+        case 1:
+          mouse.click = 'middle';
+          mouse.middle = {
+            click: true,
+            x: mouse.x,
+            y: mouse.y
+          };
+          break;
+
+        case 2:
+          mouse.click = 'right';
+          mouse.right = true;
+          break;
+      }
+      _this3.checkForClicks();
+    });
+
+    canvas.addEventListener('mouseup', function (e) {
+      if (!_this3.playing[0] || !_this3.editor) return;
+
+      e.preventDefault();
+      mouse.click = null;
+      switch (e.button) {
+        case 0:
+          mouse.left = false;
+          break;
+
+        case 1:
+          mouse.middle = {
+            click: false,
+            x: null,
+            y: null
+          };
+          break;
+
+        case 2:
+          mouse.right = false;
+          break;
+      }
+    });
+  } else if (type === 'play') {
+    canvas.addEventListener('keydown', function (e) {
+      if (!_this3.playing[0] || _this3.editor) return;
+
+      if (!_this3.Player.keys.hasOwnProperty(e.key)) return;
+      e.preventDefault();
+      _this3.Player.keys[e.key] = true;
+    });
+
+    canvas.addEventListener('keyup', function (e) {
+      if (!_this3.playing[0] || _this3.editor) return;
+      if (!_this3.Player.keys.hasOwnProperty(e.key)) return;
+      e.preventDefault();
+      _this3.Player.keys[e.key] = false;
+    });
+  }
+};
+
+Game.prototype.checkForClicks = function () {
+  var _this4 = this;
+
+  var gridX = this.mouse.gridX,
+      gridY = this.mouse.gridY;
+
+  if (!this.map[gridY] || this.map[gridY] && !this.map[gridY][gridX]) return;
+
+  var cell = this.map[gridY][gridX],
+      mouseX = this.mouse.x,
+      mouseY = this.mouse.y;
+
+  this.mouse.last.gridX = gridX;
+  this.mouse.last.gridY = gridY;
+
+  var DrawPixel = function DrawPixel() {
+    if (!cell.tile || cell.tile && _this4.assets.tiles[cell.tile.name] != _this4.select.tile.name) {
+      var _cfg$updateArr;
+
+      cell.empty = false;
+      cell.tile = {};
+      cell.tile.name = _this4.select.tile.name;
+
+      (_cfg$updateArr = _this4.cfg.updateArr).push.apply(_cfg$updateArr, _toConsumableArray(_tilesManager2.default.getValue(_this4, gridX, gridY, false, false)));
+      _this4.cfg.updateArr.push({ x: gridX, y: gridY });
+    } else if (false) {}
+  };
+
+  if (this.mouse.right) {
+    var _cfg$updateArr2;
+
+    this.mouse.last.click = 'right';
+    cell.empty = true;
+    cell.collision = false;
+
+    (_cfg$updateArr2 = this.cfg.updateArr).push.apply(_cfg$updateArr2, _toConsumableArray(_tilesManager2.default.getValue(this, gridX, gridY, true, false)));
+    this.cfg.updateArr.push({ x: gridX, y: gridY });
+  }
+
+  if (this.mouse.left) {
+    this.mouse.last.click = 'left';
+
+    DrawPixel(gridX, gridY);
+  }
+  if (this.mouse.middle.click) {
+    this.mouse.last.click = 'middle';
+    this.translate.x += mouseX - this.mouse.middle.x;
+    this.translate.y += mouseY - this.mouse.middle.y;
+    this.mouse.middle.x = mouseX;
+    this.mouse.middle.y = mouseY;
+    this.cfg.updateAll = true;
+  }
+};
+
+module.exports = Game;
 
 /***/ }),
 
@@ -294,9 +909,8 @@ Game.animate = function () {
 
 
 module.exports = function (canvas, game) {
-
     canvas.addEventListener('mousemove', function (e) {
-        if (!game.playing[0]) return;
+        if (!game.playing[0] || !game.editor) return;
 
         game.mouse.x = e.clientX;
         game.mouse.y = e.clientY;
@@ -310,17 +924,8 @@ module.exports = function (canvas, game) {
         game.checkForClicks();
     });
 
-    canvas.addEventListener('resize', function () {
-        if (!game.playing[0]) return;
-
-        game.c.width = innerWidth;
-        game.c.height = innerHeight;
-
-        init();
-    });
-
     canvas.addEventListener('mouseleave', function (e) {
-        if (!game.playing[0]) return;
+        if (!game.playing[0] || !game.editor) return;
 
         game.mouse.left = false;
         game.mouse.right = false;
@@ -333,11 +938,11 @@ module.exports = function (canvas, game) {
 
     canvas.addEventListener("wheel", function (e) {
 
-        var cx = game.mouse.x / game.cfg.scale | 0,
-            cy = game.mouse.y / game.cfg.scale | 0;
-        console.log(game.map[cy][cx]);
-        return;
-        if (!game.playing[0]) return;
+        // const cx = game.mouse.gridX = Math.floor((game.mouse.x - game.translate.x) / game.cfg.scale),
+        //       cy = game.mouse.gridY = Math.floor((game.mouse.y - game.translate.y) / game.cfg.scale)
+        // return console.log(game.map[cy][cx])
+
+        if (!game.playing[0] || !game.editor) return;
         var zoomTo = e.wheelDelta > 0 ? 4 : -4;
 
         if (8 <= game.cfg.scale + zoomTo && game.cfg.scale + zoomTo <= 96) {
@@ -349,7 +954,7 @@ module.exports = function (canvas, game) {
     });
 
     canvas.addEventListener('mousedown', function (e) {
-        if (!game.playing[0]) return;
+        if (!game.playing[0] || !game.editor) return;
 
         e.preventDefault();
 
@@ -377,7 +982,7 @@ module.exports = function (canvas, game) {
     });
 
     canvas.addEventListener('mouseup', function (e) {
-        if (!game.playing[0]) return;
+        if (!game.playing[0] || !game.editor) return;
 
         e.preventDefault();
         game.mouse.click = null;
@@ -410,7 +1015,7 @@ module.exports = function (canvas, game) {
 /*! exports provided: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, default */
 /***/ (function(module) {
 
-module.exports = [[{"type":"Rectangle","x":0,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":14,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":15,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":16,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":17,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":18,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":19,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":0,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Rectangle","x":14,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":15,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":16,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":17,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":18,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":19,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":20,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":21,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":22,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":23,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":24,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":25,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":26,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Rectangle","x":27,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":1,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":27,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":28,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":29,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":30,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Rectangle","x":31,"y":2,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Rectangle","x":2,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":3,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":4,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":5,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":6,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":7,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":8,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":9,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":10,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":11,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":12,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Rectangle","x":13,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":30,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":31,"y":3,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":4,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":4,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":12,"y":4,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":13,"y":4,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":30,"y":4,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":31,"y":4,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":12,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":13,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":27,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":28,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":29,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":30,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":31,"y":5,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":12,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":13,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,{"type":"Rectangle","x":18,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":0,"id":0,"x":0,"y":0},"collision":true},0,0,0,{"type":"Rectangle","x":22,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":0,"id":0,"x":0,"y":0},"collision":true},0,0,0,{"type":"Rectangle","x":26,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":27,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":6,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":12,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":13,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":27,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":7,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":2,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":15,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":16,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":27,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":8,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":15,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":16,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":27,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":9,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":3,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,{"type":"Rectangle","x":6,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Rectangle","x":7,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":216,"id":37,"x":370,"y":296},"collision":true},{"type":"Rectangle","x":8,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":9,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":10,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":11,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":12,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":13,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":14,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":15,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":16,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":27,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":10,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,{"type":"Rectangle","x":7,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":8,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":9,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":10,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":11,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":12,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":13,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":14,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":15,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":16,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":27,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":11,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":4,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":26,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":27,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":28,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Rectangle","x":29,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":12,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":28,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":29,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Rectangle","x":30,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":13,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":5,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":29,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":30,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":14,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":29,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":30,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Rectangle","x":31,"y":15,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":6,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":7,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,{"type":"Rectangle","x":10,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Rectangle","x":11,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,0,{"type":"Rectangle","x":15,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":16,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":17,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":18,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":19,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":20,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":21,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":22,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":23,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":24,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":25,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":26,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,{"type":"Rectangle","x":30,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":31,"y":16,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,{"type":"Rectangle","x":15,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":16,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":17,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":18,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":19,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,{"type":"Rectangle","x":30,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":31,"y":17,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,{"type":"Rectangle","x":15,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":16,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":17,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":18,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":19,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Rectangle","x":20,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":21,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":22,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":23,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":24,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":25,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":26,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":27,"id":10,"x":148,"y":74},"collision":true},{"type":"Rectangle","x":27,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,{"type":"Rectangle","x":30,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":31,"y":18,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,{"type":"Rectangle","x":15,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":16,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":17,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":18,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":19,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":30,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":31,"y":19,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Rectangle","x":3,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":4,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":5,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Rectangle","x":6,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,{"type":"Rectangle","x":15,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":16,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":17,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":18,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":19,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":29,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":30,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":31,"y":20,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":5,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":6,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":7,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,{"type":"Rectangle","x":15,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Rectangle","x":16,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":17,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":18,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Rectangle","x":19,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,{"type":"Rectangle","x":28,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":29,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":30,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":21,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Rectangle","x":2,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Rectangle","x":27,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":28,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":29,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":22,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,{"type":"Rectangle","x":10,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":11,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":12,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,0,0,{"type":"Rectangle","x":21,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":22,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":23,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":24,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":25,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":26,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":27,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":28,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":23,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,{"type":"Rectangle","x":5,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":6,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":7,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":8,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,{"type":"Rectangle","x":10,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":11,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,{"type":"Rectangle","x":21,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":22,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":24,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":123,"id":31,"x":518,"y":222},"collision":true},{"type":"Rectangle","x":2,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,{"type":"Rectangle","x":5,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":6,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":9,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":10,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":11,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":13,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":14,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":15,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,{"type":"Rectangle","x":18,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":19,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":20,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":21,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":22,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":25,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,{"type":"Rectangle","x":5,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":6,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":14,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":15,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":18,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":19,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":26,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":4,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Rectangle","x":5,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":6,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":14,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":15,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":18,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":19,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":27,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":2,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,{"type":"Rectangle","x":4,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":5,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":14,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":15,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":18,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":19,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":28,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Rectangle","x":3,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Rectangle","x":4,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Rectangle","x":5,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":14,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":15,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":18,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":19,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":29,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":14,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":15,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":18,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":19,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":30,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Rectangle","x":0,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":1,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":2,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":3,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":4,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":5,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":6,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":7,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":8,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":9,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":10,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":11,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":12,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":13,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":14,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":15,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Rectangle","x":18,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Rectangle","x":19,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":20,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":21,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":22,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":23,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":24,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":25,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":26,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":27,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":28,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":29,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":30,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Rectangle","x":31,"y":31,"color":"white","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}]];
+module.exports = [[{"type":"Wall","x":0,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":15,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,{"type":"Wall","x":17,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":18,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":19,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":20,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":21,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,{"type":"Wall","x":25,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":26,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":27,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":28,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":29,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":30,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":0,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":14,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":15,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,{"type":"Wall","x":18,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":19,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":20,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":30,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":31,"y":1,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true}],[{"type":"Wall","x":0,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":31,"y":2,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true}],[{"type":"Wall","x":0,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":5,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":6,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":7,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":8,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":13,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":31,"y":3,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true}],[{"type":"Wall","x":0,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":4,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,{"type":"Wall","x":7,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":8,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":9,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":10,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":11,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":12,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":30,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":31,"y":4,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true}],[{"type":"Wall","x":0,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":2,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":3,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,{"type":"Wall","x":10,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":11,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":30,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":5,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":17,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":18,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,{"type":"Wall","x":24,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":0,"id":0,"x":0,"y":0},"collision":true},0,0,0,0,{"type":"Wall","x":29,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":30,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":6,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":7,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":7,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":17,"y":7,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":18,"y":7,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":7,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":30,"y":7,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":7,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":16,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Wall","x":17,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":30,"id":11,"x":222,"y":74},"collision":true},{"type":"Wall","x":18,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,{"type":"Wall","x":28,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":29,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":30,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":8,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":9,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":9,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":27,"y":9,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":28,"y":9,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":29,"y":9,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":9,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":9,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":2,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":3,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,{"type":"Wall","x":6,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Wall","x":7,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,0,0,0,{"type":"Wall","x":13,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Wall","x":14,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":27,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":28,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":10,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":27,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":28,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":11,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":4,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":27,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":28,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":29,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":12,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":28,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":29,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":30,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":13,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":5,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":30,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":14,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":30,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":31,"y":15,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":6,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":7,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":120,"id":29,"x":370,"y":222},"collision":true},{"type":"Wall","x":8,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,0,0,{"type":"Wall","x":13,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Wall","x":14,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":216,"id":37,"x":370,"y":296},"collision":true},{"type":"Wall","x":15,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":120,"id":29,"x":370,"y":222},"collision":true},{"type":"Wall","x":16,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,0,0,0,{"type":"Wall","x":22,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Wall","x":23,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":216,"id":37,"x":370,"y":296},"collision":true},{"type":"Wall","x":24,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":25,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":26,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,{"type":"Wall","x":30,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":31,"y":16,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true}],[{"type":"Wall","x":0,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,{"type":"Wall","x":14,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":15,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":75,"id":17,"x":74,"y":148},"collision":true},0,0,0,0,0,0,0,{"type":"Wall","x":23,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":24,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":25,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,{"type":"Wall","x":31,"y":17,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true}],[{"type":"Wall","x":0,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,{"type":"Wall","x":15,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":66,"id":14,"x":444,"y":74},"collision":true},0,0,0,0,0,0,0,0,{"type":"Wall","x":24,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":25,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":26,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":27,"id":10,"x":148,"y":74},"collision":true},{"type":"Wall","x":27,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,0,{"type":"Wall","x":31,"y":18,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true}],[{"type":"Wall","x":0,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":6,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":7,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,{"type":"Wall","x":15,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":2,"id":1,"x":74,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":30,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":31,"y":19,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true}],[{"type":"Wall","x":0,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":4,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":31,"id":12,"x":296,"y":74},"collision":true},{"type":"Wall","x":5,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":30,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":31,"y":20,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":21,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":21,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":21,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":3,"y":21,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":29,"y":21,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":30,"y":21,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":21,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":22,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":22,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":127,"id":33,"x":74,"y":296},"collision":true},{"type":"Wall","x":2,"y":22,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":11,"id":4,"x":296,"y":0},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":28,"y":22,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":29,"y":22,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":30,"y":22,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":22,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":23,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":23,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,{"type":"Wall","x":28,"y":23,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":29,"y":23,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":23,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":23,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,{"type":"Wall","x":5,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":6,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":7,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":8,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":9,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","c":{},"x":10,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true,"strokeStyle":"gray"},{"type":"Wall","x":11,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":12,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":13,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":14,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,{"type":"Wall","x":17,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":16,"id":5,"x":370,"y":0},"collision":true},{"type":"Wall","x":18,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":8,"id":2,"x":148,"y":0},"collision":true},0,0,{"type":"Wall","x":21,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":22,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":23,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":24,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":25,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":26,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":27,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":28,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":29,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":24,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,{"type":"Wall","x":5,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":6,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,{"type":"Wall","x":21,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":22,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":23,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":24,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":25,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":27,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":28,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":25,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Wall","x":4,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":5,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":6,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":15,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,0,{"type":"Wall","x":22,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":22,"id":7,"x":518,"y":0},"collision":true},{"type":"Wall","x":23,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":223,"id":41,"x":74,"y":370},"collision":true},{"type":"Wall","x":24,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":25,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":27,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":28,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":26,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,{"type":"Wall","x":4,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":5,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":15,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,0,0,{"type":"Wall","x":23,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":24,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":25,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":27,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":28,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":27,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":2,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,{"type":"Wall","x":4,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":5,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":15,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":16,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,0,0,{"type":"Wall","x":22,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":23,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":24,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":25,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":27,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":28,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":28,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":3,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":4,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":5,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":15,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":16,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":107,"id":28,"x":296,"y":222},"collision":true},0,0,0,0,0,{"type":"Wall","x":22,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":214,"id":36,"x":296,"y":296},"collision":true},{"type":"Wall","x":23,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":24,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":25,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":27,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":28,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":29,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":15,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":16,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":17,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":104,"id":26,"x":148,"y":222},"collision":true},0,0,0,{"type":"Wall","x":21,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":208,"id":34,"x":148,"y":296},"collision":true},{"type":"Wall","x":22,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":23,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":24,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":25,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":27,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":28,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":30,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}],[{"type":"Wall","x":0,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":1,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":2,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":3,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":4,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":5,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":6,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":7,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":8,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":9,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":10,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":11,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":12,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":13,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":14,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":15,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":16,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":17,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":251,"id":44,"x":296,"y":370},"collision":true},{"type":"Wall","x":18,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":19,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":20,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":248,"id":42,"x":148,"y":370},"collision":true},{"type":"Wall","x":21,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":254,"id":45,"x":370,"y":370},"collision":true},{"type":"Wall","x":22,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":23,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":24,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":25,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":26,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":27,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":28,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":29,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":30,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false},{"type":"Wall","x":31,"y":31,"w":64,"h":64,"dx":0,"dy":0,"color":"white","strokeStyle":"gray","empty":false,"tile":{"name":"landscape","value":255,"id":46,"x":444,"y":370},"collision":false}]];
 
 /***/ }),
 
@@ -442,172 +1047,329 @@ var _tilesManager2 = _interopRequireDefault(_tilesManager);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 module.exports = {
-  Game: __webpack_require__(/*! ./objects/game */ "./src/objects/game.js"),
+  Box: __webpack_require__(/*! ./objects/box */ "./src/objects/box.js"),
 
-  Rectangle: __webpack_require__(/*! ./objects/rectangle */ "./src/objects/rectangle.js"),
+  Wall: __webpack_require__(/*! ./objects/wall */ "./src/objects/wall.js"),
 
-  Player: __webpack_require__(/*! ./objects/player */ "./src/objects/player.js")
+  Player: __webpack_require__(/*! ./objects/player */ "./src/objects/player.js"),
+
+  BouncingBox: __webpack_require__(/*! ./objects/bouncingBox */ "./src/objects/bouncingBox.js"),
+
+  Spike: __webpack_require__(/*! ./objects/spike */ "./src/objects/spike.js")
 };
 
 /***/ }),
 
-/***/ "./src/objects/game.js":
-/*!*****************************!*\
-  !*** ./src/objects/game.js ***!
-  \*****************************/
+/***/ "./src/objects/bouncingBox.js":
+/*!************************************!*\
+  !*** ./src/objects/bouncingBox.js ***!
+  \************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var _tilesManager = __webpack_require__(/*! ../tilesManager */ "./src/tilesManager.js");
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _tilesManager2 = _interopRequireDefault(_tilesManager);
+var _box = __webpack_require__(/*! ./box */ "./src/objects/box.js");
+
+var _box2 = _interopRequireDefault(_box);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-module.exports = function (ctx) {
-  var _this = this;
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-  this.c = ctx;
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } //import autotile from '../tilesManager';
 
-  this.map = null;
 
-  this.cfg = {
-    name: "default",
-    cols: null,
-    rows: null,
-    scale: null,
-    updateArr: [],
-    updateAll: false,
-    gravity: 0.98
-  };
+module.exports = function (_Box) {
+  _inherits(BouncingBox, _Box);
 
-  this.assets = {
-    tiles: {},
-    textures: {}
-  };
+  function BouncingBox(x, y, Game) {
+    _classCallCheck(this, BouncingBox);
 
-  this.translate = {
-    x: 0,
-    y: 0
-  };
+    var _this = _possibleConstructorReturn(this, (BouncingBox.__proto__ || Object.getPrototypeOf(BouncingBox)).call(this, x, y, Game));
 
-  this.playing = [false, false], this.select = {
-    color: 'blue',
-    brushSize: 0,
-    tile: this.assets.tiles.landscape
-  };
+    _this.h = Game.cfg.scale / 2;
+    _this.type = 'BoundingBox';
+    _this.color = 'purple';
+    _this.empty = false;
+    _this.collision = true;
+    return _this;
+  }
 
-  this.mouse = {
-    x: null,
-    y: null,
-    gridX: 0,
-    gridY: 0,
-    left: false,
-    right: false,
-    click: null,
-    middle: {
-      click: false,
-      x: null,
-      y: null
-    },
-    last: {
-      gridX: undefined,
-      gridY: undefined,
-      click: "nop"
+  _createClass(BouncingBox, [{
+    key: 'update',
+    value: function update() {
+      // this.w = this.game.cfg.scale
+      this.h = this.game.cfg.scale;
     }
+  }, {
+    key: 'resolve',
+    value: function resolve(obj, side) {
+      if (obj.type != 'Player') return;
 
-    // FUNCTIONS
-  };this.checkForClicks = function () {
-    var gridX = _this.mouse.gridX;
-    var gridY = _this.mouse.gridY;
+      var half = this.h / 2 | 0;
+      switch (side) {
+        case 'TOP':
+          if (obj.dy < -half) {
+            obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -1.1) | 0;
+            obj.hasBounced = true;
+          } else {
+            if (obj.dy < 15) {
+              obj.y = this.getTop() - obj.h;
+              obj.dy = 0;
+              obj.isOnFloor = true;
+            } else {
+              obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -1.1) | 0;
+              obj.hasBounced = true;
+            }
+          }
+          break;
 
-    _this.mouse.last.gridX = gridX;
-    _this.mouse.last.gridY = gridY;
+        case 'BOTTOM':
+          if (obj.dy >= half) {
+            obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -1.1) | 0;
+            obj.hasBounced = true;
+          } else {
+            if (obj.dy < 15) {
+              obj.y = this.getBottom();
+              obj.dy = 0;
+              obj.isOnFloor = true;
+            } else {
+              obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -1.1) | 0;
+              obj.hasBounced = true;
+            }
+          }
+          break;
 
-    var DrawPixel = function DrawPixel(a, b) {
-      if (!_this.map[b] || _this.map[b] && !_this.map[b][a]) return;
+        case 'LEFT':
+          if (obj.dx < -half) {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -1.1);
+              obj.hasBounced = true;
+              // obj.x = this.getRight()
+            }
+          } else {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -1.1);
+              obj.x = this.getLeft() - obj.w;
+              obj.hasBounced = true;
+            }
+          }
+          break;
 
-      if (!_this.map[b][a].tile || _this.map[b][a].tile && _this.assets.tiles[_this.map[b][a].tile.name] != _this.select.tile.name) {
-        var _cfg$updateArr;
-
-        _this.map[b][a].empty = false;
-        _this.map[b][a].tile = {};
-        _this.map[b][a].tile.name = _this.select.tile.name, (_cfg$updateArr = _this.cfg.updateArr).push.apply(_cfg$updateArr, _toConsumableArray(_tilesManager2.default.getValue(_this, gridX, gridY, false, false)));
-        _this.cfg.updateArr.push({ x: a, y: b });
+        case 'RIGHT':
+          if (obj.dx >= half) {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -1.1);
+              obj.x = this.getLeft() - obj.w;
+              obj.hasBounced = true;
+            }
+          } else {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -1.1);
+              obj.x = this.getRight();
+              obj.hasBounced = true;
+            }
+          }
+          break;
       }
-      //else map[b][a].color = (mouse.left) ? theColor : 'white'
-    };
 
-    if (_this.mouse.right) {
-      var _cfg$updateArr2;
+      function isColliding(box, p, x, y) {
+        var l1 = box.getLeft(),
+            r1 = box.getRight(),
+            t1 = box.getTop(),
+            b1 = box.getBottom(),
+            l2 = p.getLeft(x),
+            r2 = p.getRight(x),
+            t2 = p.getTop(y),
+            b2 = p.getBottom(y);
 
-      //return console.log(this.map[gridY][gridX])
-      _this.mouse.last.click = 'right';
-      if (!_this.map[gridY] || _this.map[gridY] && !_this.map[gridY][gridX]) return;
-      _this.map[gridY][gridX].empty = true;
-      _this.map[gridY][gridX].collision = false;
-      (_cfg$updateArr2 = _this.cfg.updateArr).push.apply(_cfg$updateArr2, _toConsumableArray(_tilesManager2.default.getValue(_this, gridX, gridY, true, false)));
-      _this.cfg.updateArr.push({ x: gridX, y: gridY });
-    }
-
-    if (_this.mouse.left) {
-      _this.mouse.last.click = 'left';
-
-      DrawPixel(gridX, gridY);
-    }
-    if (_this.mouse.middle.click) {
-      _this.mouse.last.click = 'middle';
-      _this.translate.x += _this.mouse.x - _this.mouse.middle.x;
-      _this.translate.y += _this.mouse.y - _this.mouse.middle.y;
-      _this.mouse.middle.x = _this.mouse.x;
-      _this.mouse.middle.y = _this.mouse.y;
-      _this.cfg.updateAll = true;
-    }
-  };
-
-  this.update = function (canvas, p) {
-    if (_this.cfg.updateAll) {
-      var scale = _this.cfg.scale;
-      var tX = _this.translate.x;
-      var tY = _this.translate.y;
-
-      // const canvasCols = Math.ceil(canvas.width / scale)
-      // const canvasRows = Math.ceil(canvas.height / scale)
-      // const xStart = (Math.floor((tX / scale) * -1) > 0) ? Math.floor((tX / scale) * -1) : 0
-      // const yStart = (Math.floor((tY / scale) * -1) > 0) ? Math.floor((tY / scale) * -1) : 0
-
-      // for(let y = yStart; y < canvasRows + yStart+1; y++) {
-      //   for(let x = xStart; x < canvasCols + xStart+1; x++) {
-      //     if(!this.map[y]) continue
-      //     if(!this.map[y][x]) continue
-      //     this.map[y][x].draw(this)
-      //     //if(this.map[y][x].collision && p) p.check(this, this.map[y][x])
-      //   }
-      // }
-      for (var y = 0; y < _this.map.length; y++) {
-        for (var x = 0; x < _this.map[0].length; x++) {
-          if (!_this.map[y]) continue;
-          if (!_this.map[y][x]) continue;
-          _this.map[y][x].draw(_this);
-          //if(this.map[y][x].collision && p) p.check(this, this.map[y][x])
+        if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
+          return true;
         }
+        //console.log('in')
+        return false;
       }
-
-      _this.cfg.updateAll = false;
-    } else if (_this.cfg.updateArr.length > 0) {
-      for (var i = 0; i < _this.cfg.updateArr.length; i++) {
-        _this.map[_this.cfg.updateArr[i].y][_this.cfg.updateArr[i].x].draw(_this);
-      }
-
-      _this.cfg.updateArr = [];
     }
-  };
-};
+  }]);
+
+  return BouncingBox;
+}(_box2.default);
+
+/***/ }),
+
+/***/ "./src/objects/box.js":
+/*!****************************!*\
+  !*** ./src/objects/box.js ***!
+  \****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+//import autotile from '../tilesManager';
+
+module.exports = function () {
+  function Box(x, y, Game) {
+    _classCallCheck(this, Box);
+
+    this.type = 'Box';
+    this.game = Game;
+    this.x = x;
+    this.y = y;
+    this.w = Game.cfg.scale;
+    this.h = Game.cfg.scale;
+    this.dx = 0;
+    this.dy = 0;
+    this.color = 'white';
+    this.empty = true;
+    this.collision = false;
+  }
+
+  _createClass(Box, [{
+    key: 'getLeft',
+    value: function getLeft(displayDelta) {
+      var scale = this.game.cfg.scale;
+      return this.x * scale + (displayDelta ? this.dx : 0);
+    }
+  }, {
+    key: 'getTop',
+    value: function getTop(displayDelta) {
+      var scale = this.game.cfg.scale;
+      return this.y * scale + (scale - this.h) + (displayDelta ? this.dy : 0);
+    }
+  }, {
+    key: 'getRight',
+    value: function getRight(displayDelta) {
+      return this.getLeft(displayDelta) + this.w;
+    }
+  }, {
+    key: 'getBottom',
+    value: function getBottom(displayDelta) {
+      return this.getTop(displayDelta) + this.h;
+    }
+  }, {
+    key: 'getHalfWidth',
+    value: function getHalfWidth(displayDelta) {
+      return this.getRight(displayDelta) - this.w / 2;
+    }
+  }, {
+    key: 'getHalfHeight',
+    value: function getHalfHeight(displayDelta) {
+      return this.getBottom(displayDelta) - this.h / 2;
+    }
+  }, {
+    key: 'draw',
+    value: function draw() {
+      var c = this.game.c,
+          scale = this.game.cfg.scale,
+          x = this.x * scale,
+          y = this.y * scale + (scale - this.h);
+
+      c.beginPath();
+      c.rect(x, y, this.w, this.h);
+      c.fillStyle = this.color;
+      c.stroke();
+      c.fill();
+      c.closePath();
+    }
+  }, {
+    key: 'update',
+    value: function update() {
+      var scale = this.game.cfg.scale;
+      this.w = scale;
+      this.h = scale;
+    }
+  }, {
+    key: 'normalCollision',
+    value: function normalCollision(obj, side) {
+      var half = this.h / 2 | 0;
+
+      console.log(obj.hasBounced);
+      switch (side) {
+        case 'TOP':
+          if (obj.dy < -half) {
+            obj.dy = 0;
+            obj.y = this.getBottom();
+          } else {
+            obj.dy = 0;
+            obj.y = this.getTop() - obj.h;
+            obj.isOnFloor = true;
+            obj.hasBounced = false;
+          }
+          break;
+
+        case 'BOTTOM':
+          if (obj.dy >= half) {
+            obj.dy = 0;
+            obj.y = this.getTop() - obj.h;
+            obj.isOnFloor = true;
+            obj.hasBounced = false;
+          } else {
+            obj.dy = 0;
+            obj.y = this.getBottom();
+          }
+          break;
+
+        case 'LEFT':
+          if (obj.dx < -half) {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = 0;
+              obj.x = this.getRight();
+            }
+          } else {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = 0;
+              obj.x = this.getLeft() - obj.w;
+            }
+          }
+          break;
+
+        case 'RIGHT':
+          if (obj.dx >= half) {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = 0;
+              obj.x = this.getLeft() - obj.w;
+            }
+          } else {
+            if (isColliding(this, obj, true, false)) {
+              obj.dx = 0;
+              obj.x = this.getRight();
+            }
+          }
+          break;
+      }
+
+      function isColliding(box, p, x, y) {
+        var l1 = box.getLeft(),
+            r1 = box.getRight(),
+            t1 = box.getTop(),
+            b1 = box.getBottom(),
+            l2 = p.getLeft(x),
+            r2 = p.getRight(x),
+            t2 = p.getTop(y),
+            b2 = p.getBottom(y);
+
+        if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
+          return true;
+        }
+        return false;
+      }
+    }
+  }]);
+
+  return Box;
+}();
 
 /***/ }),
 
@@ -621,352 +1383,384 @@ module.exports = function (ctx) {
 "use strict";
 
 
-var _utils = __webpack_require__(/*! ../utils */ "./src/utils.js");
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _utils2 = _interopRequireDefault(_utils);
+var _box = __webpack_require__(/*! ./box */ "./src/objects/box.js");
+
+var _box2 = _interopRequireDefault(_box);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-module.exports = function (c, game, x, y, w, h) {
-  var _this = this;
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-  var name = arguments.length > 6 && arguments[6] !== undefined ? arguments[6] : 'Tom';
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-  this.type = 'Player';
-  this.color = 'brown';
-  this.name = name;
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-  this.w = w;
-  this.h = h;
-  this.cw = h / game.cfg.scale | 0;
-  this.ch = h / game.cfg.scale | 0;
-  this.x = x * game.cfg.scale + (game.cfg.scale / 2 - w / 2);
-  this.y = y * game.cfg.scale;
+module.exports = function (_Box) {
+  _inherits(Player, _Box);
 
-  this.dx = 0;
-  this.dy = 0;
-  this.accel = 0.5;
-  this.maxSpeed = 10;
-  this.jumpForce = 0;
-  this.vel = 0;
-  this.mass = 1;
-  this.gravity = this.mass * 0.98;
+  function Player(x, y, name, Game) {
+    _classCallCheck(this, Player);
 
-  this.getLeft = function () {
-    return _this.x;
-  };
+    var _this = _possibleConstructorReturn(this, (Player.__proto__ || Object.getPrototypeOf(Player)).call(this, x, y, Game));
 
-  this.getRight = function () {
-    return _this.x + _this.w;
-  };
+    _this.type = 'Player';
+    _this.color = 'brown';
+    _this.name = name;
 
-  this.getTop = function () {
-    return _this.y;
-  };
+    _this.x = x * _this.game.cfg.scale;
+    _this.y = y * _this.game.cfg.scale;
+    _this.h = 100;
+    _this.w = 50;
 
-  this.getBottom = function () {
-    return _this.y + _this.h;
-  };
+    _this.respawn = [_this.x, _this.y];
 
-  this.getHalfWidth = function () {
-    return _this.x + _this.w / 2;
-  };
+    _this.accel = 1;
+    _this.maxSpeed = 10;
+    _this.jumpForce = 0;
+    _this.mass = 1;
+    _this.gravity = 0.98; // this.mass * 0.98;
 
-  this.getHalfHeight = function () {
-    return _this.y + _this.h / 2;
-  };
-
-  this.isOnFloor = false;
-
-  this.keys = {
-    'ArrowLeft': false, // LEFT
-    'ArrowUp': false, // UP
-    'ArrowRight': false, // RIGHT
-    'ArrowDown': false // DOWN
-  };
-
-  this.draw = function () {
-    c.beginPath();
-    c.rect(_this.x, _this.y, _this.w, _this.h);
-    c.fillStyle = _this.color;
-    c.fill();
-    c.closePath();
-
-    // c.beginPath()
-    // c.arc(this.cx, this.cy, 3, 0, 2 * Math.PI)
-    // c.fillStyle = 'red'
-    // c.fill()
-    // c.closePath()
-  };
-
-  this.jump = function () {
-    if (!_this.isOnFloor) return;
-    _this.dy = -16;
+    _this.canJump = true;
     _this.isOnFloor = false;
-  };
+    _this.isDead = false;
+    _this.hasBounced = false;
 
-  this.canMove = {
-    left: true,
-    right: true,
-    up: true,
-    down: true,
-    actor: this,
-    clear: function clear() {
-      this.left = true;
-      this.right = true;
-      this.up = true;
-      this.down = true;
-    },
-    check: function check() {
-      this.clear();
-
-      var scale = game.cfg.scale,
-          x = this.actor.x,
-          y = this.actor.y,
-          cx = x / scale | 0,
-          cy = y / scale | 0;
-
-      if (x % scale === 0) {
-        if (_utils2.default.getBlock(game.map, cx - 1, cy)) {
-          this.left = false;
-        }
-        // else if(y % scale !== 0 && fn.getBlock(game.map, cx-1, cy +1)){
-        //   this.left = false;
-        // }
-
-        if (_utils2.default.getBlock(game.map, cx + 1, cy)) {
-          this.right = false;
-        }
-        // else if(y % scale !== 0 && fn.getBlock(game.map, cx+1, cy +1)){
-        //   this.right = false;
-        // }
-      }
-      if (y % scale === 0) {
-        if (_utils2.default.getBlock(game.map, cx, cy - 1)) {
-          this.up = false;
-        }
-        // else if(x % scale !== 0 && fn.getBlock(game.map, cx+1, cy -1)){
-        //   this.up = false;
-        // }
-
-        if (_utils2.default.getBlock(game.map, cx, cy + 1)) {
-          this.down = false;
-        }
-        // else if(x % scale !== 0 && fn.getBlock(game.map, cx+1,cy +1)){
-        //   this.down = false;
-        // }
-      }
-      // console.log(this.actor.canMove)
-    }
-  };
-
-  this.actions = function () {
-    _this.isIdle = true;
-
-    if (_this.keys.ArrowLeft && _this.canMove.left) {
-      _this.dx = Math.max(_this.dx - _this.accel, -_this.maxSpeed);
-      _this.isIdle = false;
-    }
-
-    if (_this.keys.ArrowRight && _this.canMove.right) {
-      _this.dx = Math.min(_this.dx + _this.accel, _this.maxSpeed);
-      _this.isIdle = false;
-    }
-
-    if (_this.keys.ArrowUp && _this.canMove.up) {
-      _this.jump();
-    }
-
-    // if (this.keys.ArrowDown && this.canMove.down)
-    // {
-    //     // Something
-    // }
-  };
-
-  this.cx = this.x + this.w / 2;
-  this.cy = this.y + this.h / 2;
-
-  this.update = function () {
-    this.canMove.check();
-    this.actions();
-
-    var scale = game.cfg.scale,
-        dy = this.dy,
-        dx = this.dx,
-        x = this.x,
-        y = this.y,
-        ph = this.h,
-        pw = this.w,
-        xx = x + dx,
-        yy = y + dy,
-        cx = (x + pw / 2) / scale | 0,
-        cy = (y + ph / 2) / scale | 0;
-
-    var speed = Math.sqrt(dx * dx + dy * dy);
-
-    //game.map[cy][cx].strokeStyle = 'red'
-
-    if (dy > 0) this.isOnFloor = false;
-
-    // GRAVITY AND FRICTIONS
-    this.dy += dy < 0 ? 0.98 : 1.3;
-    if (this.isIdle) {
-      var friction = this.isOnFloor ? 0.3 : 0.07;
-      this.dx = _utils2.default.lerp(dx, 0, friction);
-    }
-
-    var checkCollision = function checkCollision(ox, oy) {
-      if (!_utils2.default.getBlock(game.map, ox, oy)) return false;
-
-      var px1 = xx,
-          px2 = xx + pw,
-          py1 = yy,
-          py2 = yy + ph,
-          ox1 = ox * scale,
-          ox2 = ox * scale + scale,
-          oy1 = oy * scale,
-          oy2 = oy * scale + scale;
-
-      var bool = false;
-
-      if (px2 > ox1 && px1 < ox2 && py2 > oy1 && py1 < oy2) bool = true;
-
-      // if(bool) {}
-      return bool;
+    _this.keys = {
+      'ArrowLeft': false, // LEFT
+      'ArrowUp': false, // UP
+      'ArrowRight': false, // RIGHT
+      'ArrowDown': false, // DOWN
+      'SpaceDown': false,
+      'SpaceBarre': false
     };
+    return _this;
+  }
 
-    var isCollidingRight = checkCollision(cx + 1, cy),
-        isCollidingLeft = checkCollision(cx - 1, cy),
-        isCollidingDown = dy > 0 ? checkCollision(cx, cy + 1) : null,
-        isCollidingTop = dy < 0 ? checkCollision(cx, cy - 1) : null,
-        isCollidingDownLeft = dy > 0 ? checkCollision(cx - 1, cy + 1) : null,
-        isCollidingDownRight = dy > 0 ? checkCollision(cx + 1, cy + 1) : null,
-        isCollidingTopLeft = dy < 0 ? checkCollision(cx - 1, cy - 1) : null,
-        isCollidingTopRight = dy < 0 ? checkCollision(cx + 1, cy - 1) : null;
-
-    if (dy > 0 && (isCollidingDown || !isCollidingDown && isCollidingDownLeft && !isCollidingLeft || !isCollidingDown && isCollidingDownRight && !isCollidingRight)) {
-      this.y = (cy + 1) * scale - ph;
-      this.dy = dy = 0;
-      this.isOnFloor = true;
-      // console.log('>> Down')
+  _createClass(Player, [{
+    key: 'getLeft',
+    value: function getLeft(vel) {
+      return this.x + (vel ? this.dx : 0);
     }
-
-    if (dy < 0 && (isCollidingTop || !isCollidingTop && isCollidingTopLeft && !isCollidingLeft || !isCollidingTop && isCollidingTopRight && !isCollidingRight)) {
-      this.y = (cy - 1) * scale + ph;
-      this.dy = dy = 0;
-      // console.log('>> Top')
+  }, {
+    key: 'getRight',
+    value: function getRight(vel) {
+      return this.x + this.w + (vel ? this.dx : 0);
     }
-
-    if (dx < 0 && isCollidingLeft) {
-      this.x = (cx - 1) * scale + pw;
-      this.dx = dx = 0;
-      // console.log('>> Left')
+  }, {
+    key: 'getTop',
+    value: function getTop(vel) {
+      return this.y + (vel ? this.dy : 0);
     }
-
-    if (dx > 0 && isCollidingRight) {
-      this.x = (cx + 1) * scale - pw;
-      this.dx = dx = 0;
-      // console.log('>> Right')
+  }, {
+    key: 'getBottom',
+    value: function getBottom(vel) {
+      return this.y + this.h + (vel ? this.dy : 0);
     }
+  }, {
+    key: 'getHalfWidth',
+    value: function getHalfWidth(vel) {
+      return this.x + this.w / 2 + (vel ? this.dx : 0);
+    }
+  }, {
+    key: 'getHalfHeight',
+    value: function getHalfHeight(vel) {
+      return this.y + this.h / 2 + (vel ? this.dy : 0);
+    }
+  }, {
+    key: 'jump',
+    value: function jump() {
+      if (!this.isOnFloor || !this.canJump) return;
+      this.dy = -17;
+      this.isOnFloor = false;
+      this.canJump = false;
+    }
+  }, {
+    key: 'die',
+    value: function die() {
+      this.x = this.respawn[0];
+      this.y = this.respawn[1];
+      this.dx = 0;
+      this.dy = 0;
+      this.isOnFloor = false;
+      this.hasBounced = false;
+      this.isDead = true;
+    }
+  }, {
+    key: 'spawn',
+    value: function spawn() {
+      this.isDead = false;
+    }
+  }, {
+    key: 'draw',
+    value: function draw() {
+      if (this.isDead) return;
+      var c = this.game.c;
+      c.beginPath();
+      c.rect(this.x, this.y, this.w, this.h);
+      c.fillStyle = this.color;
+      c.fill();
+      c.closePath();
+    }
+  }, {
+    key: 'actions',
+    value: function actions() {
+      this.isIdle = true;
+      if (this.isDead) return;
 
-    this.x += dx;
-    this.y += dy;
+      if (!this.keys.ArrowUp) {
+        this.canJump = true;
+      }
 
-    this.draw();
-  };
-};
+      if (this.keys.ArrowLeft) {
+        this.dx = Math.max(this.dx - this.accel, -this.maxSpeed);
+        this.isIdle = false;
+      }
+
+      if (this.keys.ArrowRight) {
+        this.dx = Math.min(this.dx + this.accel, this.maxSpeed);
+        this.isIdle = false;
+      }
+
+      if (this.keys.ArrowUp) {
+        this.jump();
+      } // if (this.keys.ArrowDown)  
+
+
+      // GRAVITY AND FRICTIONS
+      this.dy += 0.98;
+      if (this.isIdle) {
+        var friction = this.isOnFloor ? 0.3 : 0.07;
+        this.dx = this.game.utils.lerp(this.dx, 0, friction);
+      }
+    }
+  }, {
+    key: 'resolve',
+    value: function resolve(obj, side) {
+      // Something
+    }
+  }, {
+    key: 'update',
+    value: function update() {
+      // console.log(this.isDead)
+      if (this.isDead) return;
+
+      // console.log('PlayerY =', this.dy)
+
+      if (this.dy > 0) this.isOnFloor = false;
+
+      if (this.dy > 0) {
+        this.dy = this.dy > 63 ? 63 : this.dy;
+      } else if (this.dy < 0) {
+        this.dy = this.dy < -63 ? -63 : this.dy;
+      }
+      if (this.dx > 0) {
+        this.dx = this.dx > 63 ? 63 : this.dx;
+      } else if (this.dx < 0) {
+        this.dx = this.dx < -63 ? -63 : this.dx;
+      }
+
+      // Map border
+      var scale = this.game.cfg.scale,
+          cols = this.game.cfg.cols,
+          rows = this.game.cfg.rows;
+
+      if (this.getLeft(true) < 0) {
+        this.x = 0;
+        // return this.die()
+        this.dx = 0;
+      } else if (this.getRight(true) > cols * scale) {
+        this.x = cols * scale - this.w;
+        // return this.die()
+        this.dx = 0;
+      }
+
+      if (this.getTop(true) < 0) {
+        this.y = 0;
+        // return this.die()
+        this.dy = 0;
+      } else if (this.getBottom(true) > rows * scale) {
+        this.y = rows * scale - this.h;
+        this.isOnFloor = true;
+        // return this.die()
+        this.dy = 0;
+      }
+
+      this.x += this.dx;
+      this.y += this.dy;
+
+      this.draw();
+    }
+  }]);
+
+  return Player;
+}(_box2.default);
 
 /***/ }),
 
-/***/ "./src/objects/rectangle.js":
-/*!**********************************!*\
-  !*** ./src/objects/rectangle.js ***!
-  \**********************************/
+/***/ "./src/objects/spike.js":
+/*!******************************!*\
+  !*** ./src/objects/spike.js ***!
+  \******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _box = __webpack_require__(/*! ./box */ "./src/objects/box.js");
+
+var _box2 = _interopRequireDefault(_box);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } //import autotile from '../tilesManager';
+
+
+module.exports = function (_Box) {
+  _inherits(Spike, _Box);
+
+  function Spike(x, y, Game) {
+    _classCallCheck(this, Spike);
+
+    var _this = _possibleConstructorReturn(this, (Spike.__proto__ || Object.getPrototypeOf(Spike)).call(this, x, y, Game));
+
+    _this.h = Game.cfg.scale / 2;
+    _this.type = 'Spike';
+    _this.color = 'gray';
+    _this.empty = false;
+    _this.collision = true;
+    return _this;
+  }
+
+  _createClass(Spike, [{
+    key: 'update',
+    value: function update() {
+      // this.w = this.game.cfg.scale
+      this.h = this.game.cfg.scale / 2;
+    }
+  }, {
+    key: 'resolve',
+    value: function resolve(obj, side) {
+      if (obj.type != 'Player') return;
+
+      if (side === 'TOP') {
+        return obj.die();
+      }
+      this.normalCollision(obj, side);
+    }
+  }]);
+
+  return Spike;
+}(_box2.default);
+
+/***/ }),
+
+/***/ "./src/objects/wall.js":
+/*!*****************************!*\
+  !*** ./src/objects/wall.js ***!
+  \*****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 var _tilesManager = __webpack_require__(/*! ../tilesManager */ "./src/tilesManager.js");
 
 var _tilesManager2 = _interopRequireDefault(_tilesManager);
 
+var _box = __webpack_require__(/*! ./box */ "./src/objects/box.js");
+
+var _box2 = _interopRequireDefault(_box);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-module.exports = function (c, x, y) {
-  var _this = this;
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-  this.type = 'Rectangle';
-  this.x = x;
-  this.y = y;
-  this.w = 32;
-  this.h = 32;
-  this.color = 'white';
-  this.strokeStyle = 'gray';
-  this.empty = true;
-  this.tile = null;
-  this.collision = false;
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-  this.getLeft = function () {
-    return _this.x;
-  };
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-  this.getTop = function () {
-    return _this.y;
-  };
+module.exports = function (_Box) {
+  _inherits(Wall, _Box);
 
-  this.getRight = function () {
-    return _this.x + _this.w;
-  };
+  function Wall(x, y, Game) {
+    _classCallCheck(this, Wall);
 
-  this.getBottom = function () {
-    return _this.y + _this.h;
-  };
+    var _this = _possibleConstructorReturn(this, (Wall.__proto__ || Object.getPrototypeOf(Wall)).call(this, x, y, Game));
 
-  this.draw = function (game) {
-    if (!this.tile) {
-      // c.beginPath()
-      // c.rect(this.x*game.cfg.scale, this.y*game.cfg.scale, game.cfg.scale, game.cfg.scale)
-      // c.fillStyle = this.color
-      // c.fill()
-      // c.strokeStyle = this.strokeStyle
-      // c.stroke()
-      // c.closePath()
+    _this.type = 'Wall';
+    _this.tile = null;
+    return _this;
+  }
 
-      // this.strokeStyle = 'gray'
-    } else {
-      c.beginPath();
-      c.drawImage(game.assets.tiles[this.tile.name].img, this.tile.x, this.tile.y, game.assets.tiles[this.tile.name].size, game.assets.tiles[this.tile.name].size, this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
-      c.closePath();
+  _createClass(Wall, [{
+    key: 'draw',
+    value: function draw() {
+      var game = this.game;
+      var c = game.c;
+      if (!this.tile) {
+        return;
+        c.beginPath();
+        c.rect(this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
+        c.fillStyle = this.color;
+        c.fill();
+        c.strokeStyle = this.strokeStyle;
+        c.stroke();
+        c.closePath();
+
+        this.strokeStyle = 'gray';
+      } else {
+        c.beginPath();
+        c.drawImage(game.assets.tiles[this.tile.name].img, this.tile.x, this.tile.y, game.assets.tiles[this.tile.name].size, game.assets.tiles[this.tile.name].size, this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
+        c.closePath();
+      }
     }
-  };
+  }, {
+    key: 'update',
+    value: function update() {
+      if (!this.game.editor) return;
+      var game = this.game;
+      this.w = game.cfg.scale;
+      this.h = game.cfg.scale;
 
-  this.update = function (game) {
-    this.w = game.cfg.scale;
-    this.h = game.cfg.scale;
+      if (this.tile) {
+        this.collision = this.tile.value < 255 ? true : false;
+        var v = _tilesManager2.default.getID(this.tile.value);
+        this.tile.id = v === 0 ? 0 : v - 1;
 
-    if (this.tile) {
-      this.collision = this.tile.value < 255 ? true : false;
-      var v = _tilesManager2.default.getID(this.tile.value);
-      this.tile.id = v === 0 ? 0 : v - 1;
+        var x = this.tile.id % game.assets.tiles[this.tile.name].w;
+        var y = Math.floor(this.tile.id / game.assets.tiles[this.tile.name].w);
 
-      var _x = this.tile.id % game.assets.tiles[this.tile.name].w;
-      var _y = Math.floor(this.tile.id / game.assets.tiles[this.tile.name].w);
-
-      this.tile.x = _x * game.assets.tiles[this.tile.name].size + _x * game.assets.tiles[this.tile.name].iX;
-      this.tile.y = _y * game.assets.tiles[this.tile.name].size + _y * game.assets.tiles[this.tile.name].iY;
+        this.tile.x = x * game.assets.tiles[this.tile.name].size + x * game.assets.tiles[this.tile.name].iX;
+        this.tile.y = y * game.assets.tiles[this.tile.name].size + y * game.assets.tiles[this.tile.name].iY;
+      }
     }
-  };
+  }, {
+    key: 'resolve',
+    value: function resolve(obj, side) {
+      if (obj.type != 'Player') return;
 
-  this.check = function (g, p) {
-    if (!this.collision) return;
-
-    if (p.x > this.x && p.x < this.x + g.cfg.scale && p.y > this.y && p.y < this.y + g.cfg.scale) {
-      p.x = this.x - p.w;
+      // console.log(side)
+      // console.log(
+      //   obj.dx, obj.dy
+      // )
+      this.normalCollision(obj, side);
     }
-  };
-};
+  }]);
+
+  return Wall;
+}(_box2.default);
 
 /***/ }),
 
@@ -981,16 +1775,16 @@ module.exports = function (c, x, y) {
 
 
 module.exports = function (p, game) {
-
   document.addEventListener('keydown', function (e) {
-    if (!game.playing[0]) return;
+    if (!game.playing[0] || game.editor) return;
+
     if (!p.keys.hasOwnProperty(e.key)) return;
     e.preventDefault();
     p.keys[e.key] = true;
   });
 
   document.addEventListener('keyup', function (e) {
-    if (!game.playing[0]) return;
+    if (!game.playing[0] || game.editor) return;
     if (!p.keys.hasOwnProperty(e.key)) return;
     e.preventDefault();
     p.keys[e.key] = false;
@@ -1256,12 +2050,31 @@ module.exports = {
     if (value1 === 0) return false;
     amount = amount < 0 ? 0 : amount;
     amount = amount > 1 ? 1 : amount;
-    var result = value1 + (value2 - value1) * amount;
-    return result.toFixed(0) != 0 ? result : 0;
+    var result = Number((value1 + (value2 - value1) * amount).toFixed(2));
+    return result.toFixed(0) != value2 ? result : value2;
   },
 
   getBlock: function getBlock(arr, x, y) {
     if (!arr[y]) return false;else if (arr[y] && !arr[y][x]) return false;else if (!arr[y][x].collision) return false;else return true;
+  },
+
+  textSize: function textSize(text, font, size) {
+    var bold = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+
+    var div = document.createElement("div");
+    div.innerHTML = text;
+    div.style.position = 'absolute';
+    div.style.top = '-9999px';
+    div.style.left = '-9999px';
+    div.style.fontFamily = font;
+    div.style.fontWeight = bold ? 'bold' : 'normal';
+    div.style.fontSize = size + 'px'; // or 'pt'
+    document.body.appendChild(div);
+    var result = [div.offsetWidth, div.offsetHeight];
+    document.body.removeChild(div);
+
+    console.log(result);
+    return result;
   }
 
   /*
