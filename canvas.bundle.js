@@ -240,12 +240,15 @@ canvas.oncontextmenu = function (e) {
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
+//Keepfocusing Canvas
+
+
 // Game
 var Game = new _game2.default(canvas);
 var c = Game.c;
 
 Game.assets.tiles = _tiles2.default;
-Game.select.tile = Game.assets.tiles.landscape;
+Game.select.tile = Game.assets.tiles.spaceGround;
 Game.cfg.scale = 64;
 Game.cfg.cols = 32;
 Game.cfg.rows = 32;
@@ -284,6 +287,7 @@ Game.init = function () {
 
                     var block = Game.utils.numberToClass(cell);
                     Game.map[_row][_col] = new block(_col, _row, Game);
+                    // console.log(Game.map[row][col])
                     if (Game.map[_row][_col].type === 'Wall') _tilesManager2.default.getValue(Game, _col, _row, false, false);
                 } else {
                     if (cell.type === 'Spawn') {
@@ -363,24 +367,21 @@ var btn = new __webpack_require__(/*! ./button */ "./src/button.js");
 var btns = [];
 
 var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Story', 'test1', function () {
-    console.log('Btn1 clicked');
     Game.init();
     Game.playing = [true, true];
     Game.cfg.updateAll = true;
 
     // Game.window[Game.mode].end()
     Game.mode = 'play';
-    Game.window[Game.mode].start();
 
     Game.animate();
-    Game.start();
+    Game.window[Game.mode].start();
     btns.forEach(function (b) {
         return b.destroy();
     });
 });
 
 var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, 'Map Maker', 'test2', function () {
-    console.log('Btn2 clicked');
     Game.init();
     setTimeout(function () {
         Game.playing = [true, true];
@@ -397,9 +398,7 @@ var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, '
     }, 200);
 });
 
-var btn3 = new btn(Game, canvas.width / 2, btn2.getBottom() + 10, 250, 80, 30, 'Quit', 'test3', function () {
-    console.log('Btn3 clicked');
-});
+var btn3 = new btn(Game, canvas.width / 2, btn2.getBottom() + 10, 250, 80, 30, 'Quit', 'test3', function () {});
 btns = [btn1, btn2, btn3];
 
 /***/ }),
@@ -654,14 +653,11 @@ var Game = function () {
       y: 0
     };
 
-    this.startTime = 0;
-    this.endTime = 0;
-
     this.playing = [false, false], this.select = {
       color: 'blue',
       brushSize: 0,
       block: this.Objects.Wall,
-      tile: this.assets.tiles.landscape
+      tile: this.assets.tiles.spaceGround
     };
 
     this.mouse = {
@@ -727,19 +723,6 @@ var Game = function () {
   // }
 
   _createClass(Game, [{
-    key: 'start',
-    value: function start() {
-      this.startTime = Date.now();
-      this.Player.hide = false;
-    }
-  }, {
-    key: 'end',
-    value: function end() {
-      this.endTime = Date.now() - this.startTime;
-      this.Player.hide = true;
-      console.log(this.utils.getTime(this.endTime));
-    }
-  }, {
     key: 'updateMap',
     value: function updateMap() {
       if (this.cfg.updateAll || !this.editor) {
@@ -843,53 +826,64 @@ module.exports = function (game) {
   // CONTAINER
   var div = document.createElement('div');
   div.id = 'playMenu';
-  window.addEventListener('keydown', handleEscape.bind(div));
+  // window.addEventListener('keydown', handleEscape.bind(div))
+  // function handleEscape(e) {
+  //   if(e.key === 'Escape') {
+  //     game.window.play.pauseTimer()
+  //     const width = this.style.width.replace(/[px%]/i, '')
+  //     if (width > 0) {
+  //       this.style.width = 0
+  //     } else {
+  //       this.style.width = '100%'
+  //     }
+  //   }
+  // }
 
-  function handleEscape(e) {
-    if (e.key === 'Escape') {
 
-      var width = this.style.width.replace(/[px%]/i, '');
-      if (width > 0) {
-        game.playing[0] = true;
-        game.animate();
-        this.style.width = 0;
-      } else {
-        game.playing[0] = false;
-        this.style.width = '100%';
-      }
-    }
-  }
-
-  // BUTTON PLAY
+  // BUTTON Resume
   var btnResume = document.createElement('input');
   btnResume.id = 'btnResume';
   btnResume.type = 'button';
   btnResume.classList.add('playBtn');
-  btnResume.value = 'Resume';
+  btnResume.value = 'RESUME';
   btnResume.onclick = function (e) {
     e.preventDefault();
 
-    game.playing[0] = true;
-    game.animate();
+    game.window.play.pauseTimer();
     div.style.width = 0;
-    game.canvas.focus();
   };
   div.appendChild(btnResume);
+
+  // BUTTON Restart
+  var btnRestart = document.createElement('input');
+  btnRestart.id = 'btnRestart';
+  btnRestart.type = 'button';
+  btnRestart.classList.add('playBtn');
+  btnRestart.value = 'RESTART';
+  btnRestart.onclick = function (e) {
+    e.preventDefault();
+    game.init();
+    game.playing[0] = true;
+    div.style.width = 0;
+    game.animate();
+    game.canvas.focus();
+    game.window.play.resetTimer();
+    game.window.play.startTimer();
+  };
+  div.appendChild(btnRestart);
 
   // BUTTON EDIT
   var btnEdit = document.createElement('input');
   btnEdit.id = 'btnEdit';
   btnEdit.type = 'button';
   btnEdit.classList.add('playBtn');
-  btnEdit.value = 'Edit';
+  btnEdit.value = 'EDIT MAP';
   btnEdit.onclick = function (e) {
     e.preventDefault();
 
-    window.removeEventListener('keydown', handleEscape.bind(div));
-
-    game.window[game.mode].end();
+    game.window.play.end();
     game.mode = 'edit';
-    game.window[game.mode].start();
+    game.window.edit.start();
 
     game.init();
     game.playing = [true, true];
@@ -1041,13 +1035,13 @@ module.exports = function (game) {
 
     game.window[game.mode].end();
     game.mode = 'play';
-    game.window[game.mode].start();
 
     game.init();
     game.playing = [true, true];
     game.cfg.updateAll = true;
     game.canvas.focus();
     game.animate();
+    game.window.play.start();
   };
   div.appendChild(btnPlay);
 
@@ -1146,10 +1140,10 @@ module.exports = [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1
 /*!*****************************!*\
   !*** ./src/json/tiles.json ***!
   \*****************************/
-/*! exports provided: landscape, default */
+/*! exports provided: landscape, spaceGround, default */
 /***/ (function(module) {
 
-module.exports = {"landscape":{"name":"landscape","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2FtileMap.png?1551459491160","img":null}};
+module.exports = {"landscape":{"name":"landscape","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2FtileMap.png?1551459491160","img":null},"spaceGround":{"name":"spaceGround","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-tileMap.png?1552507399501","img":null}};
 
 /***/ }),
 
@@ -1439,24 +1433,25 @@ module.exports = function (_Block) {
           col = this.x,
           row = this.y,
           utils = this.game.utils,
-          bounce = 1.1;
+          bounce = 1.15,
+          replique = 0.7;
 
       if (objMovingBottom) {
         if (collisionTop) {
           obj.isOnFloor = true;
           obj.y = this.getTop() - obj.h;
-          obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -bounce);
+          obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
           obj.hasBounced = true;
         }
         if (collisionLeft) {
           if (utils.catchBlockCollision(col - 1, row)) {
             obj.isOnFloor = true;
             obj.y = this.getTop() - obj.h;
-            obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           } else {
             obj.x = this.getLeft() - obj.w;
-            obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           }
         }
@@ -1464,49 +1459,49 @@ module.exports = function (_Block) {
           if (utils.catchBlockCollision(col + 1, row)) {
             obj.isOnFloor = true;
             obj.y = this.getTop() - obj.h;
-            obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           } else {
             obj.x = this.getRight();
-            obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           }
         }
       } else if (objMovingTop) {
         if (collisionBottom) {
           obj.y = this.getBottom();
-          obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -bounce);
+          obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
           obj.hasBounced = true;
         }
         if (collisionLeft) {
           if (utils.catchBlockCollision(col - 1, row)) {
             obj.y = this.getBottom();
-            obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           } else {
             obj.x = this.getLeft() - obj.w;
-            obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           }
         }
         if (collisionRight) {
           if (utils.catchBlockCollision(col + 1, row)) {
             obj.y = this.getBottom();
-            obj.dy = obj.dy * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           } else {
             obj.x = this.getRight();
-            obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -bounce);
+            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
             obj.hasBounced = true;
           }
         }
       } else if (objMovingLeft && collisionRight) {
         obj.x = this.getRight();
-        obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -bounce);
+        obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
         obj.hasBounced = true;
       } else if (objMovingRight && collisionLeft) {
         obj.x = this.getLeft() - obj.w;
-        obj.dx = obj.dx * (obj.hasBounced ? -0.9 : -bounce);
+        obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
         obj.hasBounced = true;
       }
     }
@@ -1569,7 +1564,7 @@ module.exports = function (_Block) {
     value: function resolve(obj, side) {
       if (obj.type != 'Player') return;
 
-      this.game.end();
+      this.game.window.play.endTimer();
     }
   }]);
 
@@ -1678,7 +1673,6 @@ module.exports = function (_Block) {
     value: function init() {
       this.x = this.respawn[0] * this.game.cfg.scale;
       this.y = this.respawn[1] * this.game.cfg.scale;
-      console.log(this.respawn, [this.x, this.y]);
     }
   }, {
     key: 'jump',
@@ -1985,22 +1979,19 @@ module.exports = function (_Block) {
     value: function draw() {
       var game = this.game;
       var c = game.c;
-      if (!this.tile) {
-        return;
-        c.beginPath();
-        c.rect(this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
-        c.fillStyle = this.color;
-        c.fill();
-        c.strokeStyle = this.strokeStyle;
-        c.stroke();
-        c.closePath();
 
-        this.strokeStyle = 'gray';
-      } else {
-        c.beginPath();
-        c.drawImage(game.assets.tiles[this.tile.name].img, this.tile.x, this.tile.y, game.assets.tiles[this.tile.name].size, game.assets.tiles[this.tile.name].size, this.x * game.cfg.scale, this.y * game.cfg.scale, game.cfg.scale, game.cfg.scale);
-        c.closePath();
-      }
+      c.beginPath();
+      c.drawImage(game.assets.tiles[this.tile.name].img, // IMG
+      this.tile.x, // CANVAS_X
+      this.tile.y, // CANVAS_Y
+      game.assets.tiles[this.tile.name].size, // CANVAS_WIDTH
+      game.assets.tiles[this.tile.name].size, // CANVAS_HEIGHT
+      this.x * game.cfg.scale, // IMG_X
+      this.y * game.cfg.scale, // IMG_Y 
+      game.cfg.scale + 1, // IMG_WIDTH
+      game.cfg.scale + 1 // IMG_HEIGHT
+      );
+      c.closePath();
     }
   }, {
     key: 'update',
@@ -2371,6 +2362,7 @@ var Edit = function () {
     value: function end() {
       var _this2 = this;
 
+      this.game.cfg.scale = 64;
       console.log('End window Edit');
       this.list.forEach(function (evt) {
         return _this2.game.canvas.removeEventListener(evt, _this2, false);
@@ -2646,6 +2638,10 @@ module.exports = function () {
     this.background = new Image();
     this.background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
     this.menu = false;
+
+    this.startTime = 0;
+    this.endTime = 0;
+    this.pauseStart = 0;
   }
 
   _createClass(Play, [{
@@ -2656,7 +2652,8 @@ module.exports = function () {
 
       game.Camera();
 
-      var scale = game.cfg.scale,
+      var cfg = game.cfg,
+          scale = cfg.scale,
           canvas = game.canvas,
           tX = game.translate.x,
           tY = game.translate.y,
@@ -2664,9 +2661,8 @@ module.exports = function () {
           Engine = game.Engine,
           map = game.map,
           c = game.c,
-          cfg = game.cfg,
-          mapWidth = cfg.cols * cfg.scale,
-          mapHeight = cfg.rows * cfg.scale,
+          mapWidth = cfg.cols * scale,
+          mapHeight = cfg.rows * scale,
           imgHorizontal = mapWidth > mapHeight ? true : false,
           imgWidth = imgHorizontal ? mapWidth : mapWidth / 1080 * 1920,
           imgHeight = !imgHorizontal ? mapHeight : mapHeight / 1920 * 1080;
@@ -2712,11 +2708,46 @@ module.exports = function () {
       c.restore();
     }
   }, {
+    key: "startTimer",
+    value: function startTimer() {
+      this.startTime = Date.now();
+      this.game.Player.hide = false;
+    }
+  }, {
+    key: "pauseTimer",
+    value: function pauseTimer() {
+      if (!this.game.playing[0]) {
+        this.startTime -= this.pauseStart - Date.now();
+        this.game.playing[0] = true;
+        this.game.animate();
+        console.log('Play');
+      } else {
+        this.pauseStart = Date.now();
+        this.game.playing[0] = false;
+        console.log('Pause');
+      }
+      this.game.canvas.focus();
+    }
+  }, {
+    key: "resetTimer",
+    value: function resetTimer() {
+      this.startTime = 0;
+      this.endTime = 0;
+      this.pauseStart = 0;
+    }
+  }, {
+    key: "endTimer",
+    value: function endTimer() {
+      this.endTime = Date.now() - this.startTime;
+      this.game.Player.hide = true;
+      console.log(this.startTime);
+      console.log(this.game.utils.getTime(this.endTime));
+    }
+  }, {
     key: "start",
     value: function start() {
       var _this = this;
 
-      this.game.cfg.scale = 64;
       console.log('Start window Play');
       this.list.forEach(function (evt) {
         return _this.game.canvas.addEventListener(evt, _this, false);
@@ -2725,6 +2756,7 @@ module.exports = function () {
       var divGame = document.getElementById('game'),
           menu = __webpack_require__(/*! ../html_elements/playMenu */ "./src/html_elements/playMenu.js")(this.game);
       divGame.appendChild(menu);
+      this.startTimer();
     }
   }, {
     key: "end",
@@ -2739,6 +2771,8 @@ module.exports = function () {
       var divGame = document.getElementById('game'),
           menu = document.getElementById('playMenu');
       divGame.removeChild(menu);
+
+      this.resetTimer();
     }
   }, {
     key: "handleEvent",
@@ -2759,6 +2793,20 @@ module.exports = function () {
       e.preventDefault();
       if (!game.playing[0]) return;
       if (game.Player.keys.hasOwnProperty(e.key)) game.Player.keys[e.key] = true;
+
+      if (e.key === 'Escape') {
+        var div = document.getElementById('playMenu');
+
+        game.window.play.pauseTimer();
+        var width = div.style.width.replace(/[px%]/i, '');
+        if (width > 0) {
+          div.style.width = 0;
+        } else {
+          div.style.width = '100%';
+        }
+
+        game.canvas.focus();
+      }
     }
   }, {
     key: "onkeyup",
@@ -2951,60 +2999,13 @@ module.exports = function Utils(game) {
   };
 
   this.getTime = function (nb) {
+    nb = Number(nb);
     var ms = nb % 1000 | 0;
-    var sec = '' + ((nb / 1000 % 60 | 0) < 10 ? '0' : '') + (nb / 1000 % 60 | 0);
-    var min = '' + ((nb / 1000 / 60 | 0) < 10 ? '0' : '') + (nb / 1000 / 60 | 0);
+    var sec = Math.floor(nb / 1000 % 60); //`${((nb/1000%60 | 0) < 10) ? '0' : ''}${nb/1000%60 | 0}`
+    var min = Math.floor(nb / 1000 / 60); //`${((nb/1000/60 | 0) < 10) ? '0' : ''}${nb/1000/60 | 0}`
     return min + ':' + sec + ':' + ms;
   };
 };
-
-/*
-    function brush() {
-        let x = brushSize, y = 0, radiusError = 1 - x;
-        while (x >= y) {
-
-            for(let i = 0; i <= y; i++) {
-                if(i === 0) {
-                    DrawPixel(x + gridX, i + gridY);
-                    DrawPixel(-x + gridX, i + gridY);
-                    continue
-                }
-                DrawPixel(x + gridX, i + gridY);
-                DrawPixel(x + gridX, -i + gridY);
-                
-                DrawPixel(-x + gridX, i + gridY);
-                DrawPixel(-x + gridX, -i + gridY);
-            }
-
-            for(let i = 0; i <= x; i++) {
-                if(x === y) break
-                if(y === 0 && i === 0) continue
-                if(i === 0) {
-                    DrawPixel(y + gridX, i + gridY);
-                    DrawPixel(-y + gridX, i + gridY);
-                    continue
-                }
-
-                DrawPixel(y + gridX, i + gridY);
-                DrawPixel(y + gridX, -i + gridY);
-                if(y === 0) continue
-
-                DrawPixel(-y + gridX, i + gridY);
-                DrawPixel(-y + gridX, -i + gridY);
-            }
-
-            y++;
-            
-            if (radiusError < 0) {
-                radiusError += 2 * y + 1;
-            }
-            else {
-                x--;
-                radiusError+= 2 * (y - x + 1);
-            }
-        }
-    }
-*/
 
 /***/ })
 
