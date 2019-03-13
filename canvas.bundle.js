@@ -214,14 +214,6 @@ var _toolbar = __webpack_require__(/*! ./toolbar */ "./src/toolbar.js");
 
 var _toolbar2 = _interopRequireDefault(_toolbar);
 
-var _gameListeners = __webpack_require__(/*! ./gameListeners */ "./src/gameListeners.js");
-
-var _gameListeners2 = _interopRequireDefault(_gameListeners);
-
-var _playerListeners = __webpack_require__(/*! ./playerListeners */ "./src/playerListeners.js");
-
-var _playerListeners2 = _interopRequireDefault(_playerListeners);
-
 var _objects = __webpack_require__(/*! ./objects */ "./src/objects.js");
 
 var _objects2 = _interopRequireDefault(_objects);
@@ -245,8 +237,8 @@ var canvas = document.getElementById('canvas');
 canvas.oncontextmenu = function (e) {
     return e.preventDefault();
 };
-canvas.width = innerWidth - 50;
-canvas.height = innerHeight - 50;
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
 // Game
 var Game = new _game2.default(canvas);
@@ -258,27 +250,19 @@ Game.cfg.scale = 64;
 Game.cfg.cols = 32;
 Game.cfg.rows = 32;
 Game.translate.y = -(Game.cfg.rows * Game.cfg.scale) + canvas.height;
-// Game.engine = new Engine()
+
 // Load tiles IMG
 for (var t in Game.assets.tiles) {
     Game.utils.loadTiles(Game.assets.tiles[t]);
 }
 
-// Player
-var Player = Game.Player = new _objects2.default.Player(3, 27, 'James', Game); // x, y, w, h, name, Game)
+Game.map = __webpack_require__(/*! ./json/map */ "./src/json/map.json");
 
-// Toolbar
-var elUI = (0, _toolbar2.default)(Game);
-gameDiv.append(elUI);
-elUI = null;
+// Player
+Game.Player = new _objects2.default.Player(0, 0, 'James', Game); // x, y, w, h, name, Game)
 
 // Implementation
 Game.init = function () {
-    // Listeners
-    Game.events.start();
-
-    Game.map = __webpack_require__(/*! ./json/map */ "./src/json/map.json");
-
     if (!Game.map) {
         Game.map = [];
         for (var row = 0; row < Game.cfg.rows; row++) {
@@ -294,30 +278,26 @@ Game.init = function () {
             for (var _col = 0; _col < Game.map[0].length; _col++) {
                 var cell = Game.map[_row][_col];
                 if (typeof cell === 'number') {
+                    if (cell === 4) {
+                        Game.Player.respawn = [_col, _row - 1];
+                    }
+
                     var block = Game.utils.numberToClass(cell);
                     Game.map[_row][_col] = new block(_col, _row, Game);
                     if (Game.map[_row][_col].type === 'Wall') _tilesManager2.default.getValue(Game, _col, _row, false, false);
                 } else {
+                    if (cell.type === 'Spawn') {
+                        Game.Player.respawn = [_col, _row - 1];
+                    }
+
                     var _block = new Game.Objects[cell.type](_col, _row, Game);
                     Game.map[_row][_col] = Object.assign(_block, cell);
                 }
-                // return
-                // if(Game.map[row][col] != 0) {
-                //     const objName = Game.map[row][col].type
-                //     let obj = new Game.Objects[objName](col, row, Game)
-                //     Game.map[row][col] = Object.assign(obj, Game.map[row][col]);
-                // }
-                // else if(row === 23 && bouncingCalls.includes(col)) {
-                //     let obj = new Game.Objects.BouncingBox(col, row, Game) // x, y, w, h, Game
-                //     Game.map[row][col] = Object.assign(obj, Game.map[row][col]);
-                // }
-                // else {
-                //     if(Game.editor) Game.map[row][col] = new Game.Objects.Block(col, row, Game);
-                // }
             }
         }
     }
 
+    Game.Player.init();
     console.log("Lets go !");
 };
 
@@ -357,23 +337,25 @@ var mapWidth = Game.cfg.cols * Game.cfg.scale,
 
 // Animation Loop
 Game.animate = function () {
-    if (Game.playing[0]) requestAnimationFrame(Game.animate);
     now = Date.now();
     delta = now - then;
 
     if (delta > interval) {
         // console.log(delta)
         // console.time('check')
+
+        // Game.dt = delta / 20//delta * 10
+        Game.window[Game.mode].update();
+
         then = now - delta % interval;
-
-        Game.update[Game.mode].update();
-
         displayInfo();
 
         //Game.message.error('Test')
 
         // console.timeEnd('check')
     }
+
+    if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
 };
 
 // TempMenu
@@ -381,31 +363,32 @@ var btn = new __webpack_require__(/*! ./button */ "./src/button.js");
 var btns = [];
 
 var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Story', 'test1', function () {
+    console.log('Btn1 clicked');
     Game.init();
-    setTimeout(function () {
-        Game.playing = [true, true];
-        Game.cfg.updateAll = true;
+    Game.playing = [true, true];
+    Game.cfg.updateAll = true;
 
-        Game.update[Game.mode].end();
-        Game.mode = 'play';
-        Game.update[Game.mode].start();
+    // Game.window[Game.mode].end()
+    Game.mode = 'play';
+    Game.window[Game.mode].start();
 
-        Game.animate();
-        btns.forEach(function (b) {
-            return b.destroy();
-        });
-    }, 200);
+    Game.animate();
+    Game.start();
+    btns.forEach(function (b) {
+        return b.destroy();
+    });
 });
 
 var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, 'Map Maker', 'test2', function () {
+    console.log('Btn2 clicked');
     Game.init();
     setTimeout(function () {
         Game.playing = [true, true];
         Game.cfg.updateAll = true;
 
-        Game.update[Game.mode].end();
+        // Game.window[Game.mode].end()
         Game.mode = 'edit';
-        Game.update[Game.mode].start();
+        Game.window[Game.mode].start();
 
         Game.animate();
         btns.forEach(function (b) {
@@ -414,7 +397,9 @@ var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, '
     }, 200);
 });
 
-var btn3 = new btn(Game, canvas.width / 2, btn2.getBottom() + 10, 250, 80, 30, 'Quit', 'test3', function () {});
+var btn3 = new btn(Game, canvas.width / 2, btn2.getBottom() + 10, 250, 80, 30, 'Quit', 'test3', function () {
+    console.log('Btn3 clicked');
+});
 btns = [btn1, btn2, btn3];
 
 /***/ }),
@@ -599,221 +584,6 @@ module.exports = function () {
 
 /***/ }),
 
-/***/ "./src/events.js":
-/*!***********************!*\
-  !*** ./src/events.js ***!
-  \***********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-module.exports = function () {
-  function Events(game) {
-    _classCallCheck(this, Events);
-
-    this.game = game;
-    this.list = "ontouchstart" in window ? ["touchstart", "touchmove", "touchend"] : ["mousedown", "mousemove", "mouseup", "keyup", "keydown", "wheel", "mouseleave"];
-  }
-
-  _createClass(Events, [{
-    key: "start",
-    value: function start() {
-      var _this = this;
-
-      this.list.forEach(function (evt) {
-        return _this.game.canvas.addEventListener(evt, _this, false);
-      });
-      console.log('start');
-    }
-  }, {
-    key: "end",
-    value: function end() {
-      var _this2 = this;
-
-      this.list.forEach(function (evt) {
-        return _this2.game.canvas.removeEventListener(evt, _this2, false);
-      });
-      console.log('end');
-    }
-  }, {
-    key: "handleEvent",
-    value: function handleEvent(evt) {
-      var handler = "on" + evt.type;
-      if (typeof this[handler] === "function") {
-        evt.preventDefault();
-        return this[handler](evt);
-      }
-    }
-
-    // event glue
-
-  }, {
-    key: "onkeydown",
-    value: function onkeydown(e) {
-      var game = this.game;
-      e.preventDefault();
-      if (!game.playing[0] || game.editor) return;
-      if (!game.Player.keys.hasOwnProperty(e.key)) return;
-      game.Player.keys[e.key] = true;
-    }
-  }, {
-    key: "onkeyup",
-    value: function onkeyup(e) {
-      var game = this.game;
-      e.preventDefault();
-      if (!game.playing[0] || game.editor) return;
-
-      if (!game.Player.keys.hasOwnProperty(e.key)) return;
-      game.Player.keys[e.key] = false;
-    }
-  }, {
-    key: "onmousedown",
-    value: function onmousedown(e) {
-      var game = this.game;
-      if (!game.playing[0] || !game.editor) return;
-
-      switch (e.button) {
-        case 0:
-          game.mouse.click = 'left';
-          game.mouse.left = true;
-          break;
-
-        case 1:
-          game.mouse.click = 'middle';
-          game.mouse.middle = {
-            click: true,
-            x: game.mouse.x,
-            y: game.mouse.y
-          };
-          break;
-
-        case 2:
-          game.mouse.click = 'right';
-          game.mouse.right = true;
-          break;
-      }
-
-      game.checkForClicks();
-    }
-  }, {
-    key: "onmouseup",
-    value: function onmouseup(e) {
-      var game = this.game;
-      if (!game.playing[0] || !game.editor) return;
-
-      game.mouse.click = null;
-      switch (e.button) {
-        case 0:
-          game.mouse.left = false;
-          break;
-
-        case 1:
-          game.mouse.middle = {
-            click: false,
-            x: null,
-            y: null
-          };
-          break;
-
-        case 2:
-          game.mouse.right = false;
-          break;
-      }
-    }
-  }, {
-    key: "onwheel",
-    value: function onwheel(e) {
-      var game = this.game;
-      e.preventDefault();
-      if (!game.playing[0] || !game.editor) return;
-
-      var mouse = game.mouse,
-          tx = game.translate.x,
-          ty = game.translate.y,
-          scale = game.cfg.scale;
-
-      var zoomTo = e.wheelDelta > 0 ? 4 : -4;
-
-      if (8 <= scale + zoomTo && scale + zoomTo <= 96) {
-        game.translate.x = mouse.x - (mouse.x - tx) / scale * (scale + zoomTo);
-        game.translate.y = mouse.y - (mouse.y - ty) / scale * (scale + zoomTo);
-        game.cfg.scale += zoomTo;
-        game.cfg.updateAll = true;
-      }
-    }
-  }, {
-    key: "onmousemove",
-    value: function onmousemove(e) {
-      var game = this.game;
-      if (!game.playing[0] || !game.editor) return;
-
-      var mouse = game.mouse,
-          scale = game.cfg.scale,
-          tx = game.translate.x,
-          ty = game.translate.y;
-
-      game.mouse.x = e.clientX;
-      game.mouse.y = e.clientY;
-
-      game.mouse.gridX = Math.floor((mouse.x - tx) / scale);
-      game.mouse.gridY = Math.floor((mouse.y - ty) / scale);
-
-      if (!mouse.left && !mouse.right && !mouse.middle.click) return;
-      if (mouse.middle.click) game.checkForClicks();
-      if (mouse.gridX === mouse.last.gridX && mouse.gridY === mouse.last.gridY && mouse.click === mouse.last.click) return;
-      game.checkForClicks();
-    }
-  }, {
-    key: "onmouseleave",
-    value: function onmouseleave(e) {
-      var game = this.game;
-      if (!game.playing[0] || !game.editor) return;
-
-      game.mouse.left = false;
-      game.mouse.right = false;
-      game.mouse.middle = {
-        click: false,
-        x: null,
-        y: null
-      };
-    }
-  }, {
-    key: "ontouchstart",
-    value: function ontouchstart(e) {
-      var game = this.game;
-      var touch = e.targetTouches.item(0);
-      if (touch) {
-        // game.startDrawingAt({x: touch.clientX, y: touch.clientY});
-      }
-    }
-  }, {
-    key: "ontouchmove",
-    value: function ontouchmove(e) {
-      var game = this.game;
-      var touch = e.targetTouches.item(0);
-      if (touch) {
-        // game.continueDrawingTo({x: touch.clientX, y: touch.clientY});
-      }
-    }
-  }, {
-    key: "ontouchend",
-    value: function ontouchend(e) {
-      var game = this.game;
-      // game.finishDrawing();
-    }
-  }]);
-
-  return Events;
-}();
-
-/***/ }),
-
 /***/ "./src/game.js":
 /*!*********************!*\
   !*** ./src/game.js ***!
@@ -825,10 +595,6 @@ module.exports = function () {
 
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _events = __webpack_require__(/*! ./events */ "./src/events.js");
-
-var _events2 = _interopRequireDefault(_events);
 
 var _utils = __webpack_require__(/*! ./utils */ "./src/utils.js");
 
@@ -869,10 +635,9 @@ var Game = function () {
       name: "default",
       cols: null,
       rows: null,
-      scale: null,
+      scale: 64,
       updateArr: [],
-      updateAll: false,
-      gravity: 0.98
+      updateAll: false
     };
 
     this.mode = "edit";
@@ -888,6 +653,9 @@ var Game = function () {
       x: 0,
       y: 0
     };
+
+    this.startTime = 0;
+    this.endTime = 0;
 
     this.playing = [false, false], this.select = {
       color: 'blue',
@@ -946,25 +714,31 @@ var Game = function () {
       }
     };
 
-    this.events = new _events2.default(this);
+    //this.events = new Events(this)
 
-    this.update = {
+    this.window = {
       play: new _play2.default(this),
       edit: new _edit2.default(this)
     };
   }
 
+  // menu() {
+  //   require('./menu')(this)
+  // }
+
   _createClass(Game, [{
-    key: 'menu',
-    value: function menu() {
-      __webpack_require__(/*! ./menu */ "./src/menu.js")(this);
+    key: 'start',
+    value: function start() {
+      this.startTime = Date.now();
+      this.Player.hide = false;
     }
   }, {
-    key: 'start',
-    value: function start() {}
-  }, {
-    key: 'pause',
-    value: function pause() {}
+    key: 'end',
+    value: function end() {
+      this.endTime = Date.now() - this.startTime;
+      this.Player.hide = true;
+      console.log(this.utils.getTime(this.endTime));
+    }
   }, {
     key: 'updateMap',
     value: function updateMap() {
@@ -1042,113 +816,318 @@ module.exports = Game;
 
 /***/ }),
 
-/***/ "./src/gameListeners.js":
-/*!******************************!*\
-  !*** ./src/gameListeners.js ***!
-  \******************************/
+/***/ "./src/html_elements/playMenu.js":
+/*!***************************************!*\
+  !*** ./src/html_elements/playMenu.js ***!
+  \***************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-module.exports = function (canvas, game) {
-    canvas.addEventListener('mousemove', function (e) {
-        if (!game.playing[0] || !game.editor) return;
+module.exports = function (game) {
+  // CSS
+  var head = document.head || document.getElementsByTagName('head')[0],
+      style = document.createElement('style'),
+      css = '\n    #playMenu {\n      position: absolute;\n      width: 0;\n      top: 0;\n      bottom: 0;\n      left: 0;\n      background: rgba(15,15,15,0.99);\n      text-align: center;\n      overflow: hidden;\n      padding-top: calc(50vh - (7vh*2+10));\n    }\n\n    .playBtn {\n      display: block;\n      width: 20vw;\n      height: 7vh;\n      background: black;\n      color: white;\n      margin: 0 auto 10px auto;\n    }\n  ';
+  head.appendChild(style);
+  style.type = 'text/css';
+  if (style.styleSheet) {
+    // This is required for IE8 and below.
+    style.styleSheet.cssText = css;
+  } else {
+    style.appendChild(document.createTextNode(css));
+  }
 
-        game.mouse.x = e.clientX;
-        game.mouse.y = e.clientY;
+  // CONTAINER
+  var div = document.createElement('div');
+  div.id = 'playMenu';
+  window.addEventListener('keydown', handleEscape.bind(div));
 
-        game.mouse.gridX = Math.floor((game.mouse.x - game.translate.x) / game.cfg.scale);
-        game.mouse.gridY = Math.floor((game.mouse.y - game.translate.y) / game.cfg.scale);
-        if (!game.mouse.left && !game.mouse.right && !game.mouse.middle.click) return;
+  function handleEscape(e) {
+    if (e.key === 'Escape') {
 
-        if (game.mouse.middle.click) game.checkForClicks();
-        if (game.mouse.gridX === game.mouse.last.gridX && game.mouse.gridY === game.mouse.last.gridY && game.mouse.click === game.mouse.last.click) return;
-        game.checkForClicks();
-    });
+      var width = this.style.width.replace(/[px%]/i, '');
+      if (width > 0) {
+        game.playing[0] = true;
+        game.animate();
+        this.style.width = 0;
+      } else {
+        game.playing[0] = false;
+        this.style.width = '100%';
+      }
+    }
+  }
 
-    canvas.addEventListener('mouseleave', function (e) {
-        if (!game.playing[0] || !game.editor) return;
+  // BUTTON PLAY
+  var btnResume = document.createElement('input');
+  btnResume.id = 'btnResume';
+  btnResume.type = 'button';
+  btnResume.classList.add('playBtn');
+  btnResume.value = 'Resume';
+  btnResume.onclick = function (e) {
+    e.preventDefault();
 
-        game.mouse.left = false;
-        game.mouse.right = false;
-        game.mouse.middle = {
-            click: false,
-            x: null,
-            y: null
-        };
-    });
+    game.playing[0] = true;
+    game.animate();
+    div.style.width = 0;
+    game.canvas.focus();
+  };
+  div.appendChild(btnResume);
 
-    canvas.addEventListener("wheel", function (e) {
+  // BUTTON EDIT
+  var btnEdit = document.createElement('input');
+  btnEdit.id = 'btnEdit';
+  btnEdit.type = 'button';
+  btnEdit.classList.add('playBtn');
+  btnEdit.value = 'Edit';
+  btnEdit.onclick = function (e) {
+    e.preventDefault();
 
-        // const cx = game.mouse.gridX = Math.floor((game.mouse.x - game.translate.x) / game.cfg.scale),
-        //       cy = game.mouse.gridY = Math.floor((game.mouse.y - game.translate.y) / game.cfg.scale)
-        // return console.log(game.map[cy][cx])
+    window.removeEventListener('keydown', handleEscape.bind(div));
 
-        if (!game.playing[0] || !game.editor) return;
-        var zoomTo = e.wheelDelta > 0 ? 4 : -4;
+    game.window[game.mode].end();
+    game.mode = 'edit';
+    game.window[game.mode].start();
 
-        if (8 <= game.cfg.scale + zoomTo && game.cfg.scale + zoomTo <= 96) {
-            game.translate.x = game.mouse.x - (game.mouse.x - game.translate.x) / game.cfg.scale * (game.cfg.scale + zoomTo);
-            game.translate.y = game.mouse.y - (game.mouse.y - game.translate.y) / game.cfg.scale * (game.cfg.scale + zoomTo);
-            game.cfg.scale += zoomTo;
-            game.cfg.updateAll = true;
-        }
-    });
+    game.init();
+    game.playing = [true, true];
+    game.cfg.updateAll = true;
+    game.canvas.focus();
+    game.animate();
+  };
+  div.appendChild(btnEdit);
 
-    canvas.addEventListener('mousedown', function (e) {
-        if (!game.playing[0] || !game.editor) return;
-
-        e.preventDefault();
-
-        switch (e.button) {
-            case 0:
-                game.mouse.click = 'left';
-                game.mouse.left = true;
-                break;
-
-            case 1:
-                game.mouse.click = 'middle';
-                game.mouse.middle = {
-                    click: true,
-                    x: game.mouse.x,
-                    y: game.mouse.y
-                };
-                break;
-
-            case 2:
-                game.mouse.click = 'right';
-                game.mouse.right = true;
-                break;
-        }
-        game.checkForClicks();
-    });
-
-    canvas.addEventListener('mouseup', function (e) {
-        if (!game.playing[0] || !game.editor) return;
-
-        e.preventDefault();
-        game.mouse.click = null;
-        switch (e.button) {
-            case 0:
-                game.mouse.left = false;
-                break;
-
-            case 1:
-                game.mouse.middle = {
-                    click: false,
-                    x: null,
-                    y: null
-                };
-                break;
-
-            case 2:
-                game.mouse.right = false;
-                break;
-        }
-    });
+  return div;
 };
+
+// FUNCTIONS
+
+/***/ }),
+
+/***/ "./src/html_elements/toolbar.js":
+/*!**************************************!*\
+  !*** ./src/html_elements/toolbar.js ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = function (game) {
+  var theWindow = game.window.edit;
+
+  // CONTAINER
+  var div = document.createElement('div');
+  div.id = 'toolbar';
+  div.style.position = 'absolute';
+  div.style.width = game.canvas.width / 4;
+  div.style.top = 0;
+  div.style.bottom = 0;
+  div.style.left = 0;
+  div.style.background = 'rgba(15,15,15,0.99)';
+  div.style.overflow = 'hidden';
+
+  var btnHide = document.createElement('a');
+  btnHide.innerHTML = '<';
+  btnHide.style.width = 50;
+  btnHide.style.height = 50;
+  btnHide.style.position = 'absolute';
+  btnHide.style.right = -50;
+  btnHide.style.top = 0;
+  btnHide.onclick = function (e) {
+    var width = Number(div.style.width.replace('px', ''));
+    e.preventDefault();
+    console.log('test', width);
+    if (width > 0) div.style.width = 0;else div.style.width = game.canvas.width / 4;
+  };
+  div.appendChild(btnHide);
+
+  // TITLE
+  var h2 = document.createElement('h2');
+  h2.innerHTML = "SETTINGS:";
+  div.appendChild(h2);
+
+  // INPUT ROW
+  var inputRows = document.createElement('input');
+  inputRows.type = 'number';
+  inputRows.value = game.cfg.rows;
+  inputRows.onchange = function (e) {
+    var newRows = e.target.value,
+        map = [];
+
+    for (var j = 0; j < newRows; j++) {
+      if (game.map[j]) map[j] = game.map[j];else {
+        map[j] = [];
+        for (var _i = 0; _i < game.cfg.cols; _i++) {
+          map[j][_i] = new game.Objects.Block(_i, j, game);
+        }
+      }
+    }
+
+    game.map = map;
+    game.cfg.rows = newRows;
+    game.cfg.updateAll = true;
+  };
+  div.appendChild(inputRows);
+
+  // INPUT COL
+  var inputCols = document.createElement('input');
+  inputCols.type = 'number';
+  inputCols.value = game.cfg.cols;
+  inputCols.onchange = function (e) {
+    var newCols = e.target.value,
+        map = [];
+
+    for (var j = 0; j < game.cfg.rows; j++) {
+      map[j] = [];
+      for (var _i2 = 0; _i2 < newCols; _i2++) {
+        if (game.map[j][_i2]) map[j][_i2] = game.map[j][_i2];else {
+          map[j][_i2] = new game.Objects.Block(_i2, j, game);
+        }
+      }
+    }
+
+    game.map = map;
+    game.cfg.cols = newCols;
+    game.cfg.updateAll = true;
+  };
+  div.appendChild(inputCols);
+
+  // SELECT BLOCK
+  var blockTypes = ['Wall', 'BouncingBox', 'Spike', 'Spawn', 'End'],
+      selectBlock = document.createElement('select');
+  selectBlock.id = 'selectBlock';
+
+  var hasSpawn = game.map.some(function (row) {
+    return row.some(function (cell) {
+      return cell.type === "Spawn";
+    });
+  });
+
+  for (var i = 0; i < blockTypes.length; i++) {
+    var option = document.createElement("option");
+    option.value = blockTypes[i];
+    option.text = blockTypes[i];
+    if (blockTypes[i] === 'Spawn' && hasSpawn) option.disabled = true;
+    selectBlock.appendChild(option);
+  }
+
+  selectBlock.style.display = 'block';
+  selectBlock.onchange = function (e) {
+    var id = e.target.selectedIndex,
+        value = e.target[id].value;
+    game.select.block = game.Objects[value];
+  };
+  div.appendChild(selectBlock);
+
+  // BLOCK PARAMS
+
+
+  // LOAD MAP
+  var loadMap = document.createElement('input');
+  inputCols.type = 'text';
+  //div.appendChild(loadMap)
+
+
+  // BUTTON PLAY
+  var btnPlay = document.createElement('input');
+  btnPlay.type = 'button';
+  btnPlay.value = 'Play';
+  btnPlay.onclick = function (e) {
+    e.preventDefault();
+
+    game.window[game.mode].end();
+    game.mode = 'play';
+    game.window[game.mode].start();
+
+    game.init();
+    game.playing = [true, true];
+    game.cfg.updateAll = true;
+    game.canvas.focus();
+    game.animate();
+  };
+  div.appendChild(btnPlay);
+
+  // BUTTON SAVE
+  var btnSave = document.createElement('input');
+  btnSave.type = 'button';
+  btnSave.value = 'Save';
+  btnSave.onclick = function (e) {
+    e.preventDefault();
+
+    var str = '[';
+
+    game.map.forEach(function (a, aId) {
+      str += '[';
+      a.forEach(function (o, oId) {
+        str += '' + (typeof classToNumber(o.type) === 'number' ? classToNumber(o.type) : JSON.stringify(flatten(o))) + (oId < a.length - 1 ? ', ' : '');
+      });
+      str += aId < game.map.length - 1 ? '], ' : ']';
+    });
+    str += ']';
+
+    copyToClipboard(str);
+    alert('The map has been copied on your clipboard');
+  };
+  div.appendChild(btnSave);
+
+  return div;
+};
+
+// FUNCTIONS
+function copyToClipboard(text) {
+  var dummy = document.createElement("input");
+  document.body.appendChild(dummy);
+  dummy.setAttribute('value', text);
+  dummy.select();
+  document.execCommand("copy");
+  document.body.removeChild(dummy);
+}
+
+function flatten(obj) {
+  var result = Object.create(obj);
+  result.type = obj.type;
+  if (obj.tile) {
+    result.tile = {};
+    result.tile.name = obj.tile.name;
+    result.tile.value = obj.tile.value;
+  }
+  return result;
+}
+
+function classToNumber(className) {
+  if (className == 'Spawn') console.log(className);
+  switch (className) {
+    case 'Block':
+      return 0;
+
+    case 'Wall':
+      return 1;
+
+    case 'BouncingBox':
+      return 2;
+
+    case 'Spike':
+      return 3;
+
+    case 'Spawn':
+      return 4;
+
+    case 'End':
+      return 5;
+
+    default:
+      return false;
+    // case 4:
+    //   return
+
+    // case 5:
+    //   return
+  }
+}
 
 /***/ }),
 
@@ -1159,7 +1138,7 @@ module.exports = function (canvas, game) {
 /*! exports provided: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, default */
 /***/ (function(module) {
 
-module.exports = [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,0,0,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,1,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,0,0,0,0,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1],[1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]];
+module.exports = [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,1],[1,1,1,1,1,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,0,0,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,1,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,0,0,0,0,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1],[1,1,1,4,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]];
 
 /***/ }),
 
@@ -1170,50 +1149,7 @@ module.exports = [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1
 /*! exports provided: landscape, default */
 /***/ (function(module) {
 
-module.exports = {"landscape":{"name":"landscape","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2FtileMap.png?1551459491160"}};
-
-/***/ }),
-
-/***/ "./src/menu.js":
-/*!*********************!*\
-  !*** ./src/menu.js ***!
-  \*********************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = function (game) {
-  var canvas = game.canvas,
-      c = game.c;
-
-  this.game = game;
-  this.evtList = ['mousemove', 'mouseclick'];
-
-  game.utils.events(evtList);
-  evt.start();
-
-  onmousemove = function onmousemove(e) {
-    var event = new CustomEvent('menuOver', {
-      'mouse': {
-        x: e.clientX,
-        y: e.clienty
-      }
-    });
-    canvas.dispatchEvent(event);
-  };
-
-  onmouseclick = function onmouseclick(e) {
-    var event = new CustomEvent('menuOver', {
-      'mouse': {
-        x: e.clientX,
-        y: e.clienty
-      }
-    });
-    canvas.dispatchEvent(event);
-  };
-};
+module.exports = {"landscape":{"name":"landscape","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2FtileMap.png?1551459491160","img":null}};
 
 /***/ }),
 
@@ -1242,7 +1178,11 @@ module.exports = {
 
   BouncingBox: __webpack_require__(/*! ./objects/bouncingBox */ "./src/objects/bouncingBox.js"),
 
-  Spike: __webpack_require__(/*! ./objects/spike */ "./src/objects/spike.js")
+  Spike: __webpack_require__(/*! ./objects/spike */ "./src/objects/spike.js"),
+
+  Spawn: __webpack_require__(/*! ./objects/spawn */ "./src/objects/spawn.js"),
+
+  End: __webpack_require__(/*! ./objects/end */ "./src/objects/end.js")
 };
 
 /***/ }),
@@ -1577,6 +1517,67 @@ module.exports = function (_Block) {
 
 /***/ }),
 
+/***/ "./src/objects/end.js":
+/*!****************************!*\
+  !*** ./src/objects/end.js ***!
+  \****************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _block = __webpack_require__(/*! ./block */ "./src/objects/block.js");
+
+var _block2 = _interopRequireDefault(_block);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } //import autotile from '../tilesManager';
+
+
+module.exports = function (_Block) {
+  _inherits(End, _Block);
+
+  function End(x, y, Game) {
+    _classCallCheck(this, End);
+
+    var _this = _possibleConstructorReturn(this, (End.__proto__ || Object.getPrototypeOf(End)).call(this, x, y, Game));
+
+    _this.h = Game.cfg.scale * 2;
+    _this.type = 'End';
+    _this.color = 'cyan';
+    _this.empty = false;
+    _this.collision = true;
+    return _this;
+  }
+
+  _createClass(End, [{
+    key: 'update',
+    value: function update() {
+      this.w = this.game.cfg.scale;
+      this.h = this.game.cfg.scale * 2;
+    }
+  }, {
+    key: 'resolve',
+    value: function resolve(obj, side) {
+      if (obj.type != 'Player') return;
+
+      this.game.end();
+    }
+  }]);
+
+  return End;
+}(_block2.default);
+
+/***/ }),
+
 /***/ "./src/objects/player.js":
 /*!*******************************!*\
   !*** ./src/objects/player.js ***!
@@ -1613,10 +1614,10 @@ module.exports = function (_Block) {
     _this.color = 'brown';
     _this.name = name;
 
-    _this.x = x * _this.game.cfg.scale;
-    _this.y = y * _this.game.cfg.scale;
     _this.h = 100;
     _this.w = 50;
+
+    _this.hide = false;
 
     _this.respawn = [_this.x, _this.y];
 
@@ -1673,6 +1674,13 @@ module.exports = function (_Block) {
       return this.y + this.h / 2 + (vel ? this.dy : 0);
     }
   }, {
+    key: 'init',
+    value: function init() {
+      this.x = this.respawn[0] * this.game.cfg.scale;
+      this.y = this.respawn[1] * this.game.cfg.scale;
+      console.log(this.respawn, [this.x, this.y]);
+    }
+  }, {
     key: 'jump',
     value: function jump() {
       if (!this.isOnFloor || !this.canJump) return;
@@ -1683,8 +1691,8 @@ module.exports = function (_Block) {
   }, {
     key: 'die',
     value: function die() {
-      this.x = this.respawn[0];
-      this.y = this.respawn[1];
+      this.x = this.respawn[0] * this.game.cfg.scale;
+      this.y = this.respawn[1] * this.game.cfg.scale;
       this.dx = 0;
       this.dy = 0;
       this.isOnFloor = false;
@@ -1699,7 +1707,7 @@ module.exports = function (_Block) {
   }, {
     key: 'draw',
     value: function draw() {
-      if (this.isDead) return;
+      if (this.isDead || this.hide) return;
       var c = this.game.c;
       c.beginPath();
       c.rect(this.x, this.y, this.w, this.h);
@@ -1711,7 +1719,7 @@ module.exports = function (_Block) {
     key: 'actions',
     value: function actions() {
       this.isIdle = true;
-      if (this.isDead) return;
+      if (this.isDead || this.hide) return;
 
       if (!this.keys.ArrowUp) {
         this.canJump = true;
@@ -1730,14 +1738,6 @@ module.exports = function (_Block) {
       if (this.keys.ArrowUp) {
         this.jump();
       } // if (this.keys.ArrowDown)  
-
-
-      // GRAVITY AND FRICTIONS
-      this.dy += 0.98;
-      if (this.isIdle) {
-        var friction = this.isOnFloor ? 0.3 : 0.07;
-        this.dx = this.game.utils.lerp(this.dx, 0, friction);
-      }
     }
   }, {
     key: 'resolve',
@@ -1748,11 +1748,18 @@ module.exports = function (_Block) {
     key: 'update',
     value: function update() {
       // console.log(this.isDead)
-      if (this.isDead) return;
-
-      // console.log('PlayerY =', this.dy)
+      if (this.isDead || this.hide) return;
 
       if (this.dy > 0) this.isOnFloor = false;
+
+      // GRAVITY AND FRICTIONS
+      this.dy += this.gravity;
+      if (this.isIdle) {
+        var friction = this.isOnFloor ? 0.3 : 0.07;
+        this.dx = this.game.utils.lerp(this.dx, 0, friction);
+      }
+      // console.log('PlayerY =', this.dy)
+
 
       if (this.dy > 0) {
         this.dy = this.dy > 63 ? 63 : this.dy;
@@ -1799,6 +1806,65 @@ module.exports = function (_Block) {
   }]);
 
   return Player;
+}(_block2.default);
+
+/***/ }),
+
+/***/ "./src/objects/spawn.js":
+/*!******************************!*\
+  !*** ./src/objects/spawn.js ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _block = __webpack_require__(/*! ./block */ "./src/objects/block.js");
+
+var _block2 = _interopRequireDefault(_block);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } //import autotile from '../tilesManager';
+
+
+module.exports = function (_Block) {
+  _inherits(Spawn, _Block);
+
+  function Spawn(x, y, Game) {
+    _classCallCheck(this, Spawn);
+
+    var _this = _possibleConstructorReturn(this, (Spawn.__proto__ || Object.getPrototypeOf(Spawn)).call(this, x, y, Game));
+
+    _this.h = Game.cfg.scale * 2;
+    _this.type = 'Spawn';
+    _this.color = 'blue';
+    _this.empty = true;
+    _this.collision = false;
+    return _this;
+  }
+
+  _createClass(Spawn, [{
+    key: 'update',
+    value: function update() {
+      this.w = this.game.cfg.scale;
+      this.h = this.game.cfg.scale * 2;
+    }
+  }, {
+    key: 'resolve',
+    value: function resolve(obj, side) {
+      if (obj.type != 'Player') return;
+    }
+  }]);
+
+  return Spawn;
 }(_block2.default);
 
 /***/ }),
@@ -1969,35 +2035,6 @@ module.exports = function (_Block) {
 
   return Wall;
 }(_block2.default);
-
-/***/ }),
-
-/***/ "./src/playerListeners.js":
-/*!********************************!*\
-  !*** ./src/playerListeners.js ***!
-  \********************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = function (p, game) {
-  document.addEventListener('keydown', function (e) {
-    if (!game.playing[0] || game.editor) return;
-
-    if (!p.keys.hasOwnProperty(e.key)) return;
-    e.preventDefault();
-    p.keys[e.key] = true;
-  });
-
-  document.addEventListener('keyup', function (e) {
-    if (!game.playing[0] || game.editor) return;
-    if (!p.keys.hasOwnProperty(e.key)) return;
-    e.preventDefault();
-    p.keys[e.key] = false;
-  });
-};
 
 /***/ }),
 
@@ -2280,8 +2317,6 @@ var Edit = function () {
           canvas = game.canvas,
           tX = game.translate.x,
           tY = game.translate.y,
-          Player = game.Player,
-          Engine = game.Engine,
           c = game.c,
           uptAll = game.cfg.updateAll,
           uptArr = game.cfg.updateArr;
@@ -2322,10 +2357,9 @@ var Edit = function () {
     value: function start() {
       var _this = this;
 
+      console.log('Start window Edit');
       var div = document.getElementById('game'),
-          toolBar = document.createElement('div');
-      toolBar.id = 'toolbar';
-      this.game.utils.load('./tool.html', toolBar);
+          toolBar = __webpack_require__(/*! ../html_elements/toolbar */ "./src/html_elements/toolbar.js")(this.game);
       div.append(toolBar);
 
       this.list.forEach(function (evt) {
@@ -2337,12 +2371,13 @@ var Edit = function () {
     value: function end() {
       var _this2 = this;
 
-      // const elem = document.getElementById('toolbar');
-      // elem.parentNode.removeChild(elem);
-
+      console.log('End window Edit');
       this.list.forEach(function (evt) {
         return _this2.game.canvas.removeEventListener(evt, _this2, false);
       });
+
+      var elem = document.getElementById('toolbar');
+      elem.parentNode.removeChild(elem);
     }
   }, {
     key: "handleEvent",
@@ -2499,7 +2534,8 @@ Edit.prototype.checkForClicks = function () {
       gridY = game.mouse.gridY,
       map = game.map,
       mouse = game.mouse,
-      cfg = game.cfg;
+      cfg = game.cfg,
+      select = document.getElementById('selectBlock');
 
   if (!map[gridY] || map[gridY] && !map[gridY][gridX]) return;
 
@@ -2511,24 +2547,59 @@ Edit.prototype.checkForClicks = function () {
   mouse.last.gridY = gridY;
 
   var DrawPixel = function DrawPixel() {
-    if (!cell.tile || cell.tile && game.assets.tiles[cell.tile.name] != game.select.tile.name) {
+    if (game.select.block.name === 'Wall') {
       var _cfg$updateArr;
 
-      map[gridY][gridX] = new game.select.block(cell.x, cell.y, game);
+      map[gridY][gridX] = new game.select.block(gridX, gridY, game);
 
       (_cfg$updateArr = cfg.updateArr).push.apply(_cfg$updateArr, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, false, false)));
       cfg.updateArr.push({ x: gridX, y: gridY });
-    } else if (false) {}
+    } else if (game.select.block.name === 'Spawn') {
+      if (map[gridY - 1][gridX].type === 'Wall') {
+        var _cfg$updateArr2;
+
+        map[gridY - 1][gridX] = new game.Objects.Block(gridX, gridY - 1, game);
+        (_cfg$updateArr2 = cfg.updateArr).push.apply(_cfg$updateArr2, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY - 1, true, false)));
+      } else {
+        map[gridY - 1][gridX] = new game.Objects.Block(gridX, gridY - 1, game);
+      }
+
+      if (map[gridY][gridX].type === 'Wall') {
+        var _cfg$updateArr3;
+
+        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+        (_cfg$updateArr3 = cfg.updateArr).push.apply(_cfg$updateArr3, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, true, false)));
+      } else {
+        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+      }
+
+      cfg.updateArr.push({ x: gridX, y: gridY - 1 }, { x: gridX, y: gridY });
+      select.options[3].disabled = true;
+      select.value = 'Wall';
+      game.select.block = game.Objects.Wall;
+    } else {
+      if (map[gridY][gridX].type === 'Wall') {
+        var _cfg$updateArr4;
+
+        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+        (_cfg$updateArr4 = cfg.updateArr).push.apply(_cfg$updateArr4, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, true, false)));
+      } else {
+        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+      }
+      cfg.updateArr.push({ x: gridX, y: gridY });
+    }
   };
 
   if (mouse.right) {
-    var _cfg$updateArr2;
+    var _cfg$updateArr5;
 
     mouse.last.click = 'right';
 
+    if (cell.type === 'Spawn') select.options[3].disabled = false;
+
     map[gridY][gridX] = new this.game.Objects.Block(cell.x, cell.y, game);
 
-    (_cfg$updateArr2 = cfg.updateArr).push.apply(_cfg$updateArr2, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, true, false)));
+    (_cfg$updateArr5 = cfg.updateArr).push.apply(_cfg$updateArr5, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, true, false)));
     cfg.updateArr.push({ x: gridX, y: gridY });
   }
 
@@ -2571,6 +2642,10 @@ module.exports = function () {
 
     this.game = game;
     this.list = "ontouchstart" in window ? ["touchstart", "touchmove", "touchend"] : ["mousedown", "mousemove", "mouseup", "keyup", "keydown"]; //, "wheel" , "mouseleave"
+
+    this.background = new Image();
+    this.background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
+    this.menu = false;
   }
 
   _createClass(Play, [{
@@ -2594,16 +2669,14 @@ module.exports = function () {
           mapHeight = cfg.rows * cfg.scale,
           imgHorizontal = mapWidth > mapHeight ? true : false,
           imgWidth = imgHorizontal ? mapWidth : mapWidth / 1080 * 1920,
-          imgHeight = !imgHorizontal ? mapHeight : mapHeight / 1920 * 1080,
-          background = new Image(mapWidth, mapHeight);
-      background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
+          imgHeight = !imgHorizontal ? mapHeight : mapHeight / 1920 * 1080;
 
       Engine.create(cfg.rows, cfg.cols, scale);
       c.clearRect(0, 0, canvas.width, canvas.height);
 
       // Background
       c.beginPath();
-      c.drawImage(background, tX, tY, imgWidth, imgHeight);
+      c.drawImage(this.background, tX, tY, imgWidth, imgHeight);
       c.closePath();
 
       c.save();
@@ -2628,8 +2701,11 @@ module.exports = function () {
         }
       }
 
-      if (!Player.isDead) Player.actions();
-      Engine.insert(Player);
+      if (!Player.isDead && !Player.hide) {
+        Player.actions();
+        Engine.insert(Player);
+      }
+
       Engine.checkCells();
       Player.update();
 
@@ -2640,20 +2716,29 @@ module.exports = function () {
     value: function start() {
       var _this = this;
 
+      this.game.cfg.scale = 64;
+      console.log('Start window Play');
       this.list.forEach(function (evt) {
         return _this.game.canvas.addEventListener(evt, _this, false);
       });
-      console.log('start');
+
+      var divGame = document.getElementById('game'),
+          menu = __webpack_require__(/*! ../html_elements/playMenu */ "./src/html_elements/playMenu.js")(this.game);
+      divGame.appendChild(menu);
     }
   }, {
     key: "end",
     value: function end() {
       var _this2 = this;
 
+      console.log('End window Play');
       this.list.forEach(function (evt) {
         return _this2.game.canvas.removeEventListener(evt, _this2, false);
       });
-      console.log('end');
+
+      var divGame = document.getElementById('game'),
+          menu = document.getElementById('playMenu');
+      divGame.removeChild(menu);
     }
   }, {
     key: "handleEvent",
@@ -2673,8 +2758,7 @@ module.exports = function () {
       var game = this.game;
       e.preventDefault();
       if (!game.playing[0]) return;
-      if (!game.Player.keys.hasOwnProperty(e.key)) return;
-      game.Player.keys[e.key] = true;
+      if (game.Player.keys.hasOwnProperty(e.key)) game.Player.keys[e.key] = true;
     }
   }, {
     key: "onkeyup",
@@ -2773,7 +2857,8 @@ module.exports = function Utils(game) {
     amount = amount < 0 ? 0 : amount;
     amount = amount > 1 ? 1 : amount;
     var result = Number((value1 + (value2 - value1) * amount).toFixed(2));
-    return result.toFixed(0) != value2 ? result : value2;
+    var diff = Math.abs(result - value2);
+    return diff.toFixed(0) == 0 ? value2 : result;
   };
 
   this.getBlock = function (arr, x, y) {
@@ -2841,6 +2926,12 @@ module.exports = function Utils(game) {
       case 3:
         return _this.game.Objects.Spike;
 
+      case 4:
+        return _this.game.Objects.Spawn;
+
+      case 5:
+        return _this.game.Objects.End;
+
       default:
         return false;
       // case 4:
@@ -2857,6 +2948,13 @@ module.exports = function Utils(game) {
     req.send(null);
 
     element.innerHTML = req.responseText;
+  };
+
+  this.getTime = function (nb) {
+    var ms = nb % 1000 | 0;
+    var sec = '' + ((nb / 1000 % 60 | 0) < 10 ? '0' : '') + (nb / 1000 % 60 | 0);
+    var min = '' + ((nb / 1000 / 60 | 0) < 10 ? '0' : '') + (nb / 1000 / 60 | 0);
+    return min + ':' + sec + ':' + ms;
   };
 };
 

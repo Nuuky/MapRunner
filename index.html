@@ -7,12 +7,70 @@
   <style>
       body {
           margin: 0;
+          box-sizing: border-box;
       }
+
+      #canvas:focus {
+        outline: none;
+      }
+
+      #game {
+        position: relative;
+        width: max-content;
+        height: max-content;
+        /* background: gray; */
+      }
+
+      ul {
+        list-style: none;
+      }
+
+      /* #toolbar {
+        position: absolute;
+        width: 30%;
+        height: 100%; 
+        background: white;
+        top: 0;
+        left: 0;
+      } */
+
+      .block {
+        display: block;
+      }
+/* 
+      #toolbar > form > * {
+      } */
   </style>
 </head>
 <body>
   <div id="game">
-      <canvas tabindex="1" id="canvas"></canvas>
+      <canvas id="canvas" tabindex="1"></canvas>
+
+      <!-- <div id="toolbar">
+        <form action=""><h2>Settings:</h2>
+          <label>rows:</label><input name="rows" type="number"><br>
+          <label>cols:</label><input name="cols" type="number"><br>
+
+          <span>BlockType:</span> <select name="blocks" id="select-block">
+
+            <option value=""></option>
+            <option value="Wall">Wall</option>
+            <option value="BouncingBox">BouncingBox</option>
+            <option value="Spike">Spike</option>
+          </select><br>
+
+          <span>Tile:</span> <select name="tiles" id="select-tile">
+            <option value=""></option>
+            <option value="landscape">Landscape</option>
+          </select><br>
+
+          <input type="button" value="Reload">
+          <input type="button" value="Save">
+          <input type="button" value="Test">
+        </form>
+      </div> -->
   </div>
+
+
 <script type="text/javascript" src="./canvas.bundle.js"></script></body>
 </html>
