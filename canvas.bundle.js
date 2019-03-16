@@ -2636,7 +2636,7 @@ module.exports = function () {
     this.list = "ontouchstart" in window ? ["touchstart", "touchmove", "touchend"] : ["mousedown", "mousemove", "mouseup", "keyup", "keydown"]; //, "wheel" , "mouseleave"
 
     this.background = new Image();
-    this.background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
+    this.background.src = './space-background.svg';
     this.menu = false;
 
     this.startTime = 0;
