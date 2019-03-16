@@ -3079,10 +3079,10 @@ module.exports = function () {
       }
 
       // Test block
-      this.Block = new game.Objects.Wall(10.628, 6, game);
-      this.Block.tile.value = 2;
-      this.Block.update();
-      Engine.insert(this.Block);
+      // this.Block = new game.Objects.Wall(10.628, 6, game)
+      // this.Block.tile.value = 2
+      // this.Block.update()
+      // Engine.insert(this.Block)
 
       Engine.checkCells();
       Player.update();
@@ -3129,7 +3129,7 @@ module.exports = function () {
       }
 
       // Test block
-      this.Block.draw();
+      // this.Block.draw()
 
       c.restore();
 
