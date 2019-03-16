@@ -210,17 +210,9 @@ module.exports = Button;
 "use strict";
 
 
-var _toolbar = __webpack_require__(/*! ./toolbar */ "./src/toolbar.js");
-
-var _toolbar2 = _interopRequireDefault(_toolbar);
-
 var _objects = __webpack_require__(/*! ./objects */ "./src/objects.js");
 
 var _objects2 = _interopRequireDefault(_objects);
-
-var _tiles = __webpack_require__(/*! ./json/tiles */ "./src/json/tiles.json");
-
-var _tiles2 = _interopRequireDefault(_tiles);
 
 var _game = __webpack_require__(/*! ./game */ "./src/game.js");
 
@@ -241,22 +233,41 @@ canvas.width = innerWidth;
 canvas.height = innerHeight;
 
 //Keepfocusing Canvas
+// document.addEventListener('click', (e) => {
+//     e.target.focus()
+//     // e.stopPropagation()
+// })
+
+
+// canvas.onblur = function() {
+// 	this.style.background = 'transparent'
+// }
+
+// canvas.onfocus = function() {
+// 	this.style.background = 'red'
+// }
 
 
 // Game
 var Game = new _game2.default(canvas);
 var c = Game.c;
 
-Game.assets.tiles = _tiles2.default;
+Game.assets.tiles = __webpack_require__(/*! ./json/tiles.json */ "./src/json/tiles.json");
+Game.assets.img = __webpack_require__(/*! ./json/img.json */ "./src/json/img.json");
 Game.select.tile = Game.assets.tiles.spaceGround;
 Game.cfg.scale = 64;
 Game.cfg.cols = 32;
 Game.cfg.rows = 32;
 Game.translate.y = -(Game.cfg.rows * Game.cfg.scale) + canvas.height;
 
-// Load tiles IMG
+// Load tiles
 for (var t in Game.assets.tiles) {
-    Game.utils.loadTiles(Game.assets.tiles[t]);
+    Game.utils.loadImg(Game.assets.tiles[t]);
+}
+
+// Load IMG
+for (var i in Game.assets.img) {
+    Game.utils.loadImg(Game.assets.img[i]);
 }
 
 Game.map = __webpack_require__(/*! ./json/map */ "./src/json/map.json");
@@ -302,6 +313,7 @@ Game.init = function () {
     }
 
     Game.Player.init();
+    Game.Camera = new Game.Objects.Camera(Game);
     console.log("Lets go !");
 };
 
@@ -349,7 +361,10 @@ Game.animate = function () {
         // console.time('check')
 
         // Game.dt = delta / 20//delta * 10
-        Game.window[Game.mode].update();
+        if (Game.mode === 'play') {
+            Game.window.play.update();
+            Game.window.play.draw();
+        } else if (Game.mode === 'edit') Game.window.edit.update();
 
         then = now - delta % interval;
         displayInfo();
@@ -496,9 +511,11 @@ module.exports = function () {
                 b2 = o2.getBottom(true);
 
             if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
+                // console.log('collision')
                 return true;
             }
             //console.log('in')
+            // console.log('no collision')
             return false;
         }
     }, {
@@ -539,6 +556,63 @@ module.exports = function () {
     }, {
         key: 'resolve',
         value: function resolve(A, B) {
+            var Adx = A.dx,
+                Ady = A.dy,
+                Bdx = B.dx,
+                Bdy = B.dy,
+                steps = 1;
+
+            if (Math.abs(A.dx) > 31 || Math.abs(A.dy) > 31 || Math.abs(B.dx) > 31 || Math.abs(B.dy) > 31) {
+                steps = 10;
+            }
+
+            for (var i = 1; i <= steps; i++) {
+                Adx = A.dx / steps * i, Ady = A.dy / steps * i, Bdx = B.dx / steps * i, Bdy = B.dy / steps * i;
+
+                var w = 0.5 * (A.w + B.w),
+                    h = 0.5 * (A.h + B.h),
+                    dx = A.getHalfWidth() + Adx - (B.getHalfWidth() + Bdx),
+                    dy = A.getHalfHeight() + Ady - (B.getHalfHeight() + Bdy);
+
+                if (Math.abs(dx) <= w && Math.abs(dy) <= h) {
+                    /* collision! */
+                    var wy = w * dy,
+                        hx = h * dx;
+
+                    if (wy > hx) {
+                        if (wy > -hx) {
+                            /* collision at the top */
+                            A.resolve(B, 'TOP');
+                            B.resolve(A, 'BOTTOM');
+                        } else {
+                            /* on the left */
+                            A.resolve(B, 'RIGHT');
+                            B.resolve(A, 'LEFT');
+                        }
+                        break;
+                    } else {
+                        if (wy > -hx) {
+                            /* on the right */
+                            A.resolve(B, 'LEFT');
+                            B.resolve(A, 'RIGHT');
+                        } else {
+                            /* at the bottom */
+                            A.resolve(B, 'BOTTOM');
+                            B.resolve(A, 'TOP');
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // if(B.type === 'BouncingBox') {
+            //     console.log('BouncingBox', A.dy)
+            //     this.game.playing[0] = false
+            // }
+        }
+    }, {
+        key: 'oldResolve',
+        value: function oldResolve(A, B) {
             // console.log('in')
             var vX = A.getHalfWidth(true) - B.getHalfWidth(true),
                 vY = A.getHalfHeight(true) - B.getHalfHeight(true),
@@ -642,6 +716,8 @@ var Game = function () {
     this.mode = "edit";
 
     this.Engine = new _engine2.default(this.c, this.cfg.cols, this.cfg.rows, this.cfg.scale);
+
+    this.Camera = new this.Objects.Camera(this);
 
     this.assets = {
       tiles: {},
@@ -816,6 +892,7 @@ module.exports = function (game) {
       css = '\n    #playMenu {\n      position: absolute;\n      width: 0;\n      top: 0;\n      bottom: 0;\n      left: 0;\n      background: rgba(15,15,15,0.99);\n      text-align: center;\n      overflow: hidden;\n      padding-top: calc(50vh - (7vh*2+10));\n    }\n\n    .playBtn {\n      display: block;\n      width: 20vw;\n      height: 7vh;\n      background: black;\n      color: white;\n      margin: 0 auto 10px auto;\n    }\n  ';
   head.appendChild(style);
   style.type = 'text/css';
+  style.id = 'stylePlay';
   if (style.styleSheet) {
     // This is required for IE8 and below.
     style.styleSheet.cssText = css;
@@ -852,7 +929,7 @@ module.exports = function (game) {
     game.window.play.pauseTimer();
     div.style.width = 0;
   };
-  div.appendChild(btnResume);
+  div.append(btnResume);
 
   // BUTTON Restart
   var btnRestart = document.createElement('input');
@@ -868,9 +945,9 @@ module.exports = function (game) {
     game.animate();
     game.canvas.focus();
     game.window.play.resetTimer();
-    game.window.play.startTimer();
+    game.Player.hide = false;
   };
-  div.appendChild(btnRestart);
+  div.append(btnRestart);
 
   // BUTTON EDIT
   var btnEdit = document.createElement('input');
@@ -891,7 +968,7 @@ module.exports = function (game) {
     game.canvas.focus();
     game.animate();
   };
-  div.appendChild(btnEdit);
+  div.append(btnEdit);
 
   return div;
 };
@@ -911,40 +988,47 @@ module.exports = function (game) {
 
 
 module.exports = function (game) {
-  var theWindow = game.window.edit;
+  // CSS
+  var head = document.head || document.getElementsByTagName('head')[0],
+      style = document.createElement('style'),
+      css = '\n    #toolbar {\n      position: absolute;\n      top: 0;\n      bottom: 0;\n      left: 0;\n      background: rgba(15,15,15, 1);\n      overflow: hidden;\n      text-align: center;\n      padding-top: 20vh;\n    }\n\n    #toolbar > * {\n      margin: 20px auto;\n    }\n\n    .dispBlock {\n      display: block;\n    }\n\n    #playH2 {\n      margin-bottom: 30px;\n    }\n\n    #btnHide {\n      position: absolute;\n      padding: ' + (game.canvas.height / 2 - 20) + ' 7px;\n      height: 100%;\n      top: 0;\n      right: 0;\n      background: black;\n      color: white;\n    }\n\n    .inputSpan > input {\n      width: 10%;\n    }\n\n    #selectSpan > * {\n      display: block;\n      margin: auto;\n    }\n\n    .playBtn {\n      border: 1px solid white;\n      padding: 10px 20px;\n      background: black;\n      font-weight: bold;\n      color: white;\n      margin: auto 5px !important;\n      cursor: pointer;\n    }\n\n    #errorMsg {\n      color: red;\n      font-size: 1.1em;\n    }\n  ';
+  head.appendChild(style);
+  style.type = 'text/css';
+  style.id = 'styleEdit';
+  if (style.styleSheet) {
+    // This is required for IE8 and below.
+    style.styleSheet.cssText = css;
+  } else {
+    style.appendChild(document.createTextNode(css));
+  }
 
   // CONTAINER
   var div = document.createElement('div');
   div.id = 'toolbar';
-  div.style.position = 'absolute';
-  div.style.width = game.canvas.width / 4;
-  div.style.top = 0;
-  div.style.bottom = 0;
-  div.style.left = 0;
-  div.style.background = 'rgba(15,15,15,0.99)';
-  div.style.overflow = 'hidden';
+  div.style.width = '25%';
 
   var btnHide = document.createElement('a');
-  btnHide.innerHTML = '<';
-  btnHide.style.width = 50;
-  btnHide.style.height = 50;
-  btnHide.style.position = 'absolute';
-  btnHide.style.right = -50;
-  btnHide.style.top = 0;
+  btnHide.id = 'btnHide';
+  btnHide.innerHTML = '|||';
+  btnHide.href = '';
   btnHide.onclick = function (e) {
-    var width = Number(div.style.width.replace('px', ''));
     e.preventDefault();
-    console.log('test', width);
-    if (width > 0) div.style.width = 0;else div.style.width = game.canvas.width / 4;
+    var width = div.style.width.replace(/px|%/i, '');
+    // e.preventDefault()
+    if (width > 20) div.style.width = 20;else div.style.width = '25%';
   };
   div.appendChild(btnHide);
 
   // TITLE
   var h2 = document.createElement('h2');
   h2.innerHTML = "SETTINGS:";
+  h2.id = 'playH2';
   div.appendChild(h2);
 
   // INPUT ROW
+  var rowSpan = document.createElement('span');
+  rowSpan.innerHTML = 'Row: ';
+  rowSpan.classList.add('dispBlock', 'inputSpan');
   var inputRows = document.createElement('input');
   inputRows.type = 'number';
   inputRows.value = game.cfg.rows;
@@ -962,12 +1046,16 @@ module.exports = function (game) {
     }
 
     game.map = map;
-    game.cfg.rows = newRows;
+    game.cfg.rows = Number(newRows);
     game.cfg.updateAll = true;
   };
-  div.appendChild(inputRows);
+  rowSpan.appendChild(inputRows);
+  div.appendChild(rowSpan);
 
   // INPUT COL
+  var colSpan = document.createElement('span');
+  colSpan.innerHTML = 'Col: ';
+  colSpan.classList.add('dispBlock', 'inputSpan');
   var inputCols = document.createElement('input');
   inputCols.type = 'number';
   inputCols.value = game.cfg.cols;
@@ -985,29 +1073,30 @@ module.exports = function (game) {
     }
 
     game.map = map;
-    game.cfg.cols = newCols;
+    game.cfg.cols = Number(newCols);
     game.cfg.updateAll = true;
   };
-  div.appendChild(inputCols);
+  colSpan.appendChild(inputCols);
+  div.appendChild(colSpan);
 
   // SELECT BLOCK
-  var blockTypes = ['Wall', 'BouncingBox', 'Spike', 'Spawn', 'End'],
+  var blockTypes = ['Wall', 'BouncingBox', 'Spikes', 'Spawn', 'End'],
       selectBlock = document.createElement('select');
   selectBlock.id = 'selectBlock';
 
-  var hasSpawn = game.map.some(function (row) {
-    return row.some(function (cell) {
-      return cell.type === "Spawn";
-    });
-  });
+  var hasSpawn = typeExist('Spawn', game),
+      hasEnd = typeExist('End', game);
 
   for (var i = 0; i < blockTypes.length; i++) {
     var option = document.createElement("option");
     option.value = blockTypes[i];
     option.text = blockTypes[i];
-    if (blockTypes[i] === 'Spawn' && hasSpawn) option.disabled = true;
+    if (blockTypes[i] === 'Spawn' && hasSpawn) option.disabled = true;else if (blockTypes[i] === 'End' && hasEnd) option.disabled = true;
     selectBlock.appendChild(option);
   }
+
+  selectBlock.value = 'Wall';
+  game.select.block = game.Objects.Wall;
 
   selectBlock.style.display = 'block';
   selectBlock.onchange = function (e) {
@@ -1015,14 +1104,19 @@ module.exports = function (game) {
         value = e.target[id].value;
     game.select.block = game.Objects[value];
   };
-  div.appendChild(selectBlock);
+  var selectSpan = document.createElement('span');
+  selectSpan.innerHTML = 'Block Type: ';
+  selectSpan.classList.add('dispBlock');
+  selectSpan.id = 'selectSpan';
+  selectSpan.appendChild(selectBlock);
+  div.appendChild(selectSpan);
 
   // BLOCK PARAMS
 
 
   // LOAD MAP
   var loadMap = document.createElement('input');
-  inputCols.type = 'text';
+  loadMap.type = 'text';
   //div.appendChild(loadMap)
 
 
@@ -1030,8 +1124,16 @@ module.exports = function (game) {
   var btnPlay = document.createElement('input');
   btnPlay.type = 'button';
   btnPlay.value = 'Play';
+  btnPlay.classList.add('playBtn');
   btnPlay.onclick = function (e) {
-    e.preventDefault();
+    // e.preventDefault()
+
+    var hasSpawn = typeExist('Spawn', game),
+        hasEnd = typeExist('End', game);
+
+    if (!hasSpawn || !hasEnd) {
+      return errorMsg.innerHTML = 'You can\'t play without ' + (!hasSpawn ? 'Spawn' : 'End') + ' block !';
+    }
 
     game.window[game.mode].end();
     game.mode = 'play';
@@ -1049,8 +1151,9 @@ module.exports = function (game) {
   var btnSave = document.createElement('input');
   btnSave.type = 'button';
   btnSave.value = 'Save';
+  btnSave.classList.add('playBtn');
   btnSave.onclick = function (e) {
-    e.preventDefault();
+    // e.preventDefault();
 
     var str = '[';
 
@@ -1067,6 +1170,11 @@ module.exports = function (game) {
     alert('The map has been copied on your clipboard');
   };
   div.appendChild(btnSave);
+
+  var errorMsg = document.createElement('span');
+  errorMsg.classList.add('dispBlock');
+  errorMsg.id = 'errorMsg';
+  div.appendChild(errorMsg);
 
   return div;
 };
@@ -1093,7 +1201,6 @@ function flatten(obj) {
 }
 
 function classToNumber(className) {
-  if (className == 'Spawn') console.log(className);
   switch (className) {
     case 'Block':
       return 0;
@@ -1104,7 +1211,7 @@ function classToNumber(className) {
     case 'BouncingBox':
       return 2;
 
-    case 'Spike':
+    case 'Spikes':
       return 3;
 
     case 'Spawn':
@@ -1122,6 +1229,26 @@ function classToNumber(className) {
     //   return
   }
 }
+
+function typeExist(type, game) {
+  var map = game.map;
+  for (var row = 0; row < map.length; row++) {
+    if (map[row].some(function (cell) {
+      return cell.type === type;
+    })) return true;
+  }
+}
+
+/***/ }),
+
+/***/ "./src/json/img.json":
+/*!***************************!*\
+  !*** ./src/json/img.json ***!
+  \***************************/
+/*! exports provided: Spikes, BouncingBox, default */
+/***/ (function(module) {
+
+module.exports = {"Spikes":{"name":"Spikes","url":"./img/spikes.png","img":null},"BouncingBox":{"name":"BouncingBox","url":"./img/bouncingBox.png","img":null}};
 
 /***/ }),
 
@@ -1143,7 +1270,7 @@ module.exports = [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1
 /*! exports provided: landscape, spaceGround, default */
 /***/ (function(module) {
 
-module.exports = {"landscape":{"name":"landscape","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2FtileMap.png?1551459491160","img":null},"spaceGround":{"name":"spaceGround","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-tileMap.png?1552507399501","img":null}};
+module.exports = {"landscape":{"name":"landscape","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2FtileMap.png?1551459491160","img":null},"spaceGround":{"name":"spaceGround","w":8,"h":6,"l":47,"iX":10,"iY":10,"size":64,"url":"./img/space-tileMap.png","img":null}};
 
 /***/ }),
 
@@ -1172,11 +1299,13 @@ module.exports = {
 
   BouncingBox: __webpack_require__(/*! ./objects/bouncingBox */ "./src/objects/bouncingBox.js"),
 
-  Spike: __webpack_require__(/*! ./objects/spike */ "./src/objects/spike.js"),
+  Spikes: __webpack_require__(/*! ./objects/spikes */ "./src/objects/spikes.js"),
 
   Spawn: __webpack_require__(/*! ./objects/spawn */ "./src/objects/spawn.js"),
 
-  End: __webpack_require__(/*! ./objects/end */ "./src/objects/end.js")
+  End: __webpack_require__(/*! ./objects/end */ "./src/objects/end.js"),
+
+  Camera: __webpack_require__(/*! ./objects/camera */ "./src/objects/camera.js")
 };
 
 /***/ }),
@@ -1269,6 +1398,52 @@ module.exports = function () {
       this.h = scale;
     }
   }, {
+    key: 'collisionLeft',
+    value: function collisionLeft(obj, player, newDelta, oldDelta) {
+      obj.stopLeft(obj, player);
+    }
+  }, {
+    key: 'collisionTop',
+    value: function collisionTop(obj, player, newDelta, oldDelta) {
+      obj.stopTop(obj, player);
+    }
+  }, {
+    key: 'collisionRight',
+    value: function collisionRight(obj, player, newDelta, oldDelta) {
+      obj.stopRight(obj, player);
+    }
+  }, {
+    key: 'collisionBottom',
+    value: function collisionBottom(obj, player, newDelta, oldDelta) {
+      obj.stopBottom(obj, player);
+    }
+  }, {
+    key: 'stopLeft',
+    value: function stopLeft(obj, player) {
+      player.x = obj.getLeft() - player.w;
+      player.dx = 0;
+    }
+  }, {
+    key: 'stopTop',
+    value: function stopTop(obj, player) {
+      player.y = obj.getTop() - player.h;
+      player.dy = 0;
+      player.hasBounced = false;
+      player.isOnFloor = true;
+    }
+  }, {
+    key: 'stopRight',
+    value: function stopRight(obj, player) {
+      player.x = obj.getRight();
+      player.dx = 0;
+    }
+  }, {
+    key: 'stopBottom',
+    value: function stopBottom(obj, player) {
+      player.y = obj.getBottom();
+      player.dy = 0;
+    }
+  }, {
     key: 'normalCollision',
     value: function normalCollision(obj, side) {
       var objHalfHeight = this.h / 2 | 0,
@@ -1286,85 +1461,119 @@ module.exports = function () {
           utils = this.game.utils;
 
       if (objMovingBottom) {
-        if (collisionTop) {
-          obj.isOnFloor = true;
-          obj.hasBounced = false;
-          obj.y = this.getTop() - obj.h;
-          obj.dy = 0;
+        if (collisionTop && isColliding(this, obj, false, true)) {
+          obj.collision.top.push({ obj: this, callback: this.collisionTop });
         }
-        if (collisionLeft) {
-          if (utils.catchBlockCollision(col - 1, row)) {
-            obj.isOnFloor = true;
-            obj.hasBounced = false;
-            obj.y = this.getTop() - obj.h;
-            obj.dy = 0;
+        if (collisionLeft && objMovingRight) {
+          if (utils.catchBlockCollision(col - 1, row) && isColliding(utils.catchBlockCollision(col - 1, row), obj, false, true)) {
+            obj.collision.top.push({ obj: this, callback: this.collisionTop });
           } else {
-            obj.x = this.getLeft() - obj.w;
-            obj.dx = 0;
+            obj.collision.left.push({ obj: this, callback: this.collisionLeft });
           }
         }
-        if (collisionRight) {
-          if (utils.catchBlockCollision(col + 1, row)) {
-            obj.isOnFloor = true;
-            obj.hasBounced = false;
-            obj.y = this.getTop() - obj.h;
-            obj.dy = 0;
+        if (collisionRight && objMovingLeft) {
+          if (utils.catchBlockCollision(col + 1, row) && isColliding(utils.catchBlockCollision(col + 1, row), obj, false, true)) {
+            obj.collision.top.push({ obj: this, callback: this.collisionTop });
           } else {
-            obj.x = this.getRight();
-            obj.dx = 0;
+            obj.collision.right.push({ obj: this, callback: this.collisionRight });
           }
         }
       } else if (objMovingTop) {
-        if (collisionBottom) {
-          obj.y = this.getBottom();
-          obj.dy = 0;
+        if (collisionBottom && isColliding(this, obj, false, true)) {
+          obj.collision.bottom.push({ obj: this, callback: this.collisionBottom });
         }
         if (collisionLeft) {
-          if (utils.catchBlockCollision(col - 1, row)) {
-            obj.y = this.getBottom();
-            obj.dy = 0;
+          if (utils.catchBlockCollision(col - 1, row) && isColliding(utils.catchBlockCollision(col - 1, row), obj, false, true)) {
+            obj.collision.bottom.push({ obj: this, callback: this.collisionBottom });
           } else {
-            obj.x = this.getLeft() - obj.w;
-            obj.dx = 0;
+            obj.collision.left.push({ obj: this, callback: this.collisionLeft });
           }
         }
         if (collisionRight) {
-          if (utils.catchBlockCollision(col + 1, row)) {
-            obj.y = this.getBottom();
-            obj.dy = 0;
+          if (utils.catchBlockCollision(col + 1, row) && isColliding(utils.catchBlockCollision(col + 1, row), obj, false, true)) {
+            obj.collision.bottom.push({ obj: this, callback: this.collisionBottom });
           } else {
-            obj.x = this.getRight();
-            obj.dx = 0;
+            obj.collision.right.push({ obj: this, callback: this.collisionRight });
           }
         }
       } else if (objMovingLeft && collisionRight) {
-        obj.x = this.getRight();
-        obj.dx = 0;
+        obj.collision.right.push({ obj: this, callback: this.collisionRight });
       } else if (objMovingRight && collisionLeft) {
-        obj.x = this.getLeft() - obj.w;
-        obj.dx = 0;
-      }
-
-      function isColliding(box, p, x, y) {
-        var l1 = box.getLeft(),
-            r1 = box.getRight(),
-            t1 = box.getTop(),
-            b1 = box.getBottom(),
-            l2 = p.getLeft(x),
-            r2 = p.getRight(x),
-            t2 = p.getTop(y),
-            b2 = p.getBottom(y);
-
-        if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
-          return true;
-        }
-        return false;
+        obj.collision.left.push({ obj: this, callback: this.collisionLeft });
       }
     }
+
+    /*
+    newCollision(player) {
+      if(!player.type === 'Player') return
+    
+      const dx = player.dx,
+            dy = player.dy,
+              objLeft   = this.getLeft(),
+            objTop    = this.getTop(),
+            objRight  = this.getRight(),
+            objBottom = this.getBottom(),
+              playerLeft    = player.getLeft(),
+            playerTop     = player.getTop(),
+            playerRight   = player.getRight(),
+            playerBottom  = player.getBottom(),
+            playerW       = player.w,
+            playerH       = player.h;
+            
+            // collisionTopLeft = ()
+      
+      if (isColliding(this, player, false, true))
+      {
+        if (dy > 0)
+        {
+          player.y  = this.getTop() - player.h
+          player.dy = 0
+          player.isOnFloor = true
+        }
+        else if (dy < 0)
+        {
+          player.y  = this.getBottom()
+          player.dy = 0
+        }
+      }
+    
+      if (isColliding(this, player, true, false))
+      {
+        if (dx > 0)
+        {
+          player.x  = this.getLeft()
+          player.dx = 0
+        }
+        else if (dx < 0)
+        {
+          player.x  = this.getRight() - player.w
+          player.dx = 0
+        }
+      }
+      
+    }
+    */
+
   }]);
 
   return Block;
 }();
+
+function isColliding(box, p, x, y) {
+  var l1 = box.getLeft(),
+      r1 = box.getRight(),
+      t1 = box.getTop(),
+      b1 = box.getBottom(),
+      l2 = p.getLeft(x),
+      r2 = p.getRight(x),
+      t2 = p.getTop(y),
+      b2 = p.getBottom(y);
+
+  if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
+    return true;
+  }
+  return false;
+}
 
 /***/ }),
 
@@ -1410,105 +1619,211 @@ module.exports = function (_Block) {
   }
 
   _createClass(BouncingBox, [{
+    key: 'bounceFactor',
+    value: function bounceFactor(obj) {
+      return obj.hasBounced ? 0.7 : 1.1;
+    }
+  }, {
     key: 'update',
     value: function update() {
       this.w = this.game.cfg.scale;
       this.h = this.game.cfg.scale / 2;
     }
   }, {
+    key: 'draw',
+    value: function draw() {
+      var game = this.game,
+          c = game.c,
+          scale = game.cfg.scale,
+          x = this.x * scale,
+          y = this.y * scale + (scale - this.h);
+
+      c.beginPath();
+      c.drawImage(game.assets.img.BouncingBox.img, x, y, this.w + 1, this.h + 1);
+      c.closePath();
+    }
+  }, {
+    key: 'collisionLeft',
+    value: function collisionLeft(obj, player, newDelta, oldDelta) {
+      // console.log('BB-LEFT')
+      if (player.dx > 10) {
+        player.dx *= -obj.bounceFactor(player);
+        player.hasBounced = true;
+      } else obj.stopLeft(obj, player);
+    }
+  }, {
+    key: 'collisionTop',
+    value: function collisionTop(obj, player, newDelta, oldDelta) {
+      // console.log('BB-TOP')
+      if (player.dy > 10) {
+        player.dy *= -obj.bounceFactor(player);
+        // player.y += player.dy
+        player.isOnFloor = true;
+        player.hasBounced = true;
+      } else obj.stopTop(obj, player);
+    }
+  }, {
+    key: 'collisionRight',
+    value: function collisionRight(obj, player, newDelta, oldDelta) {
+      // console.log('BB-RIGHT')
+      if (player.dx < -10) {
+        player.dx *= -obj.bounceFactor(player);
+        player.hasBounced = true;
+      } else obj.stopRight(obj, player);
+    }
+  }, {
+    key: 'collisionBottom',
+    value: function collisionBottom(obj, player, newDelta, oldDelta) {
+      // console.log('BB-BOT')
+      if (player.dy < -10) {
+        player.dy *= -obj.bounceFactor(player);
+        player.hasBounced = true;
+      } else obj.stopBottom(obj, player);
+    }
+  }, {
     key: 'resolve',
-    value: function resolve(obj, side) {
-      if (obj.type != 'Player') return;
+    value: function resolve(player, side) {
+      if (player.type != 'Player') return;
 
-      var objHalfHeight = this.h / 2 | 0,
-          objHalfWidth = this.h / 2 | 0,
-          objMovingLeft = obj.dx < 0 ? true : false,
-          objMovingRight = obj.dx > 0 ? true : false,
-          objMovingTop = obj.dy < 0 ? true : false,
-          objMovingBottom = obj.dy > 0 ? true : false,
-          collisionLeft = side === 'LEFT' ? true : false,
-          collisionRight = side === 'RIGHT' ? true : false,
-          collisionTop = side === 'TOP' ? true : false,
-          collisionBottom = side === 'BOTTOM' ? true : false,
-          col = this.x,
-          row = this.y,
-          utils = this.game.utils,
-          bounce = 1.15,
-          replique = 0.7;
-
-      if (objMovingBottom) {
-        if (collisionTop) {
-          obj.isOnFloor = true;
-          obj.y = this.getTop() - obj.h;
-          obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
-          obj.hasBounced = true;
-        }
-        if (collisionLeft) {
-          if (utils.catchBlockCollision(col - 1, row)) {
-            obj.isOnFloor = true;
-            obj.y = this.getTop() - obj.h;
-            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          } else {
-            obj.x = this.getLeft() - obj.w;
-            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          }
-        }
-        if (collisionRight) {
-          if (utils.catchBlockCollision(col + 1, row)) {
-            obj.isOnFloor = true;
-            obj.y = this.getTop() - obj.h;
-            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          } else {
-            obj.x = this.getRight();
-            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          }
-        }
-      } else if (objMovingTop) {
-        if (collisionBottom) {
-          obj.y = this.getBottom();
-          obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
-          obj.hasBounced = true;
-        }
-        if (collisionLeft) {
-          if (utils.catchBlockCollision(col - 1, row)) {
-            obj.y = this.getBottom();
-            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          } else {
-            obj.x = this.getLeft() - obj.w;
-            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          }
-        }
-        if (collisionRight) {
-          if (utils.catchBlockCollision(col + 1, row)) {
-            obj.y = this.getBottom();
-            obj.dy = obj.dy * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          } else {
-            obj.x = this.getRight();
-            obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
-            obj.hasBounced = true;
-          }
-        }
-      } else if (objMovingLeft && collisionRight) {
-        obj.x = this.getRight();
-        obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
-        obj.hasBounced = true;
-      } else if (objMovingRight && collisionLeft) {
-        obj.x = this.getLeft() - obj.w;
-        obj.dx = obj.dx * (obj.hasBounced ? -replique : -bounce);
-        obj.hasBounced = true;
-      }
+      this.normalCollision(player, side);
     }
   }]);
 
   return BouncingBox;
 }(_block2.default);
+
+/***/ }),
+
+/***/ "./src/objects/camera.js":
+/*!*******************************!*\
+  !*** ./src/objects/camera.js ***!
+  \*******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Camera = function () {
+    function Camera(game) {
+        _classCallCheck(this, Camera);
+
+        this.game = game;
+        this.x = 0;
+        this.y = 0;
+        this.oldX = 0;
+        this.oldY = 0;
+
+        this.background = new Image();
+        this.background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
+        this.imgWidth = 0;
+        this.imgHeight = 0;
+
+        this.backgroundOffX = 0;
+        this.backgroundOffY = 0;
+
+        this.started = false;
+        this.bgStartX = 0;
+        this.bgStartY = 0;
+
+        var imgHorizontal = game.cfg.cols > game.cfg.rows ? true : false,
+            cellsMax = (imgHorizontal ? game.cfg.cols : game.cfg.rows) * game.cfg.scale;
+
+        this.imgWidth = imgHorizontal ? cellsMax : cellsMax / 9 * 16;
+        this.imgHeight = !imgHorizontal ? cellsMax : cellsMax / 16 * 9;
+    }
+
+    _createClass(Camera, [{
+        key: 'update',
+        value: function update() {
+            var game = this.game,
+                canvas = game.canvas,
+                Player = game.Player,
+                scale = game.cfg.scale,
+                mapWidth = game.cfg.cols * scale,
+                mapHeight = game.cfg.rows * scale,
+                halfMapWidth = mapWidth - canvas.width,
+                halfMapHeight = mapHeight - canvas.height,
+                isOffsetX = canvas.width < mapWidth ? true : false,
+                isOffsetY = canvas.height < mapHeight ? true : false,
+                imgHorizontal = mapWidth > mapHeight ? true : false,
+                PlayerHalfWidth = Player.camX + Player.w / 2,
+                PlayerHalfHeight = Player.camY + Player.h / 2;
+
+            var tx = -PlayerHalfWidth + canvas.width / 2,
+                ty = -PlayerHalfHeight + canvas.height / 2;
+
+            if (!isOffsetX) tx = canvas.width / 2 - mapWidth / 2;
+            if (!isOffsetY) ty = canvas.height / 2 - mapHeight / 2;
+
+            if (isOffsetX && PlayerHalfWidth <= canvas.width / 2) tx = 0;else if (isOffsetX && PlayerHalfWidth >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
+
+            if (isOffsetY && PlayerHalfHeight <= canvas.height / 2) ty = 0;else if (isOffsetY && PlayerHalfHeight >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
+
+            if (!Player.isDead) {
+                game.translate.x = tx;
+                game.translate.y = ty;
+                this.x = game.translate.x;
+                this.y = game.translate.y;
+            } else {
+                // If Camera POS === Player Respawn POS
+                if (game.translate.x == tx && game.translate.y == ty) {
+                    Player.spawn();
+                } else {
+                    game.translate.x = game.utils.lerp(game.translate.x, tx, 0.2);
+                    game.translate.y = game.utils.lerp(game.translate.y, ty, 0.2);
+                    this.x = game.translate.x;
+                    this.y = game.translate.y;
+                }
+            }
+            if (!this.started) {
+                this.bgStartX = this.x;
+                this.bgStartY = this.y;
+                console.log('Camera Started');
+            }
+            this.updateBg();
+
+            this.oldX = this.x;
+            this.oldY = this.y;
+        }
+    }, {
+        key: 'updateBg',
+        value: function updateBg() {
+
+            // this.backgroundOffX += (this.started) ? (this.x - this.oldX)/10 : 0
+            // this.backgroundOffY += (this.started) ? (this.y - this.oldY)/10 : 0
+
+            var game = this.game,
+                c = game.c,
+                canvas = game.canvas;
+
+            // c.beginPath()
+            // c.drawImage(
+            //   this.background, 
+            //   this.bgStartX + this.backgroundOffX, 
+            //   this.bgStartY + this.backgroundOffY,// this.y,
+            //   this.imgWidth, 
+            //   this.imgHeight
+            // )
+            // c.closePath()
+
+            c.beginPath();
+            c.fillStyle = '#111115';
+            c.fillRect(0, 0, canvas.width, canvas.height);
+            c.closePath();
+
+            if (!this.started) this.started = true;
+        }
+    }]);
+
+    return Camera;
+}();
+
+module.exports = Camera;
 
 /***/ }),
 
@@ -1561,10 +1876,11 @@ module.exports = function (_Block) {
     }
   }, {
     key: 'resolve',
-    value: function resolve(obj, side) {
-      if (obj.type != 'Player') return;
+    value: function resolve(player, side) {
+      if (player.type != 'Player') return;
 
       this.game.window.play.endTimer();
+      player.dx = player.dy = 0;
     }
   }]);
 
@@ -1612,28 +1928,44 @@ module.exports = function (_Block) {
     _this.h = 100;
     _this.w = 50;
 
+    _this.camX = _this.x, _this.camY = _this.y;
+
     _this.hide = false;
 
     _this.respawn = [_this.x, _this.y];
 
     _this.accel = 1;
-    _this.maxSpeed = 10;
+    _this.maxSpeed = 12;
     _this.jumpForce = 0;
     _this.mass = 1;
-    _this.gravity = 0.98; // this.mass * 0.98;
+    _this.gravity = 0.98;
+
+    _this.native = {
+      w: _this.w,
+      h: _this.h,
+      maxSpeed: _this.maxSpeed
+    };
 
     _this.canJump = true;
     _this.isOnFloor = false;
     _this.isDead = false;
     _this.hasBounced = false;
+    _this.isCrouching = false;
 
     _this.keys = {
-      'ArrowLeft': false, // LEFT
-      'ArrowUp': false, // UP
-      'ArrowRight': false, // RIGHT
-      'ArrowDown': false, // DOWN
+      'ArrowLeft': false,
+      'ArrowUp': false,
+      'ArrowRight': false,
+      'ArrowDown': false,
       'SpaceDown': false,
       'SpaceBarre': false
+    };
+
+    _this.collision = {
+      left: [],
+      top: [],
+      right: [],
+      bottom: []
     };
     return _this;
   }
@@ -1683,6 +2015,33 @@ module.exports = function (_Block) {
       this.canJump = false;
     }
   }, {
+    key: 'crouch',
+    value: function crouch() {
+      this.h = 50;
+      this.y += this.h;
+      this.maxSpeed *= 0.2;
+      this.isCrouching = true;
+    }
+  }, {
+    key: 'uncrouch',
+    value: function uncrouch() {
+      var game = this.game,
+          cfg = game.cfg,
+          col = Math.floor(this.x / cfg.scale),
+          row = Math.floor(this.y / cfg.scale),
+          blockTopLeft = game.map[row - 1][col],
+          blockTopRight = game.map[row - 1][col + 1],
+          isCollidingTopLeft = this.isColliding(blockTopLeft, this),
+          isCollidingTopRight = this.isColliding(blockTopRight, this);
+
+      if (isCollidingTopLeft || isCollidingTopRight) return;
+
+      this.y -= this.h;
+      this.h = 100;
+      this.maxSpeed = this.native.maxSpeed;
+      this.isCrouching = false;
+    }
+  }, {
     key: 'die',
     value: function die() {
       this.x = this.respawn[0] * this.game.cfg.scale;
@@ -1702,6 +2061,7 @@ module.exports = function (_Block) {
     key: 'draw',
     value: function draw() {
       if (this.isDead || this.hide) return;
+
       var c = this.game.c;
       c.beginPath();
       c.rect(this.x, this.y, this.w, this.h);
@@ -1710,8 +2070,8 @@ module.exports = function (_Block) {
       c.closePath();
     }
   }, {
-    key: 'actions',
-    value: function actions() {
+    key: 'move',
+    value: function move() {
       this.isIdle = true;
       if (this.isDead || this.hide) return;
 
@@ -1720,18 +2080,41 @@ module.exports = function (_Block) {
       }
 
       if (this.keys.ArrowLeft) {
-        this.dx = Math.max(this.dx - this.accel, -this.maxSpeed);
+        if (!(this.isCrouching && Math.abs(this.dx) > this.maxSpeed)) {
+          this.dx = Math.max(this.dx - this.accel, -this.maxSpeed);
+        }
         this.isIdle = false;
       }
 
       if (this.keys.ArrowRight) {
-        this.dx = Math.min(this.dx + this.accel, this.maxSpeed);
+        if (!(this.isCrouching && Math.abs(this.dx) > this.maxSpeed)) {
+          this.dx = Math.min(this.dx + this.accel, this.maxSpeed);
+        }
         this.isIdle = false;
       }
 
       if (this.keys.ArrowUp) {
         this.jump();
-      } // if (this.keys.ArrowDown)  
+      }
+
+      if (!this.isCrouching && this.keys.ArrowDown) this.crouch();
+
+      if (this.isCrouching && !this.keys.ArrowDown) this.uncrouch();
+
+      // GRAVITY AND FRICTIONS
+      this.dy += this.gravity;
+      if (this.isIdle || this.isCrouching) {
+        var friction = this.isOnFloor ? 0.3 : 0.07;
+        if (this.isCrouching && Math.abs(this.dx) > this.maxSpeed) friction = 0.01;
+        this.dx = this.game.utils.lerp(this.dx, 0, friction);
+      }
+
+      if (this.game.window.play.startTime === 0) {
+        var keysArr = Object.values(this.keys);
+        if (keysArr.some(function (e) {
+          return e;
+        })) this.game.window.play.startTimer();
+      }
     }
   }, {
     key: 'resolve',
@@ -1743,27 +2126,22 @@ module.exports = function (_Block) {
     value: function update() {
       // console.log(this.isDead)
       if (this.isDead || this.hide) return;
+      // console.log('PlayerY =', this.dy)
+
+      this.handleCollision();
 
       if (this.dy > 0) this.isOnFloor = false;
 
-      // GRAVITY AND FRICTIONS
-      this.dy += this.gravity;
-      if (this.isIdle) {
-        var friction = this.isOnFloor ? 0.3 : 0.07;
-        this.dx = this.game.utils.lerp(this.dx, 0, friction);
-      }
-      // console.log('PlayerY =', this.dy)
-
-
+      var maxSpeed = 63;
       if (this.dy > 0) {
-        this.dy = this.dy > 63 ? 63 : this.dy;
+        this.dy = this.dy > maxSpeed ? maxSpeed : this.dy;
       } else if (this.dy < 0) {
-        this.dy = this.dy < -63 ? -63 : this.dy;
+        this.dy = this.dy < -maxSpeed ? -maxSpeed : this.dy;
       }
       if (this.dx > 0) {
-        this.dx = this.dx > 63 ? 63 : this.dx;
+        this.dx = this.dx > maxSpeed ? maxSpeed : this.dx;
       } else if (this.dx < 0) {
-        this.dx = this.dx < -63 ? -63 : this.dx;
+        this.dx = this.dx < -maxSpeed ? -maxSpeed : this.dx;
       }
 
       // Map border
@@ -1795,7 +2173,110 @@ module.exports = function (_Block) {
       this.x += this.dx;
       this.y += this.dy;
 
-      this.draw();
+      this.camX = this.x;
+      this.camY = this.y;
+      if (this.isCrouching) this.camY -= this.h / 2;
+
+      // console.log(this.canY , this.canY )
+
+      // this.draw()
+
+      // console.log(this.hasBounced)
+
+      // console.log('------------------')
+    }
+  }, {
+    key: 'isColliding',
+    value: function isColliding(box, crouching) {
+      if (!box) return false;else if (box.type != 'Wall') return false;
+
+      var l1 = box.getLeft(),
+          r1 = box.getRight(),
+          t1 = box.getTop(),
+          b1 = box.getBottom(),
+          l2 = this.getLeft(),
+          r2 = this.getRight(),
+          t2 = crouching ? this.camY : this.getTop(),
+          b2 = this.getBottom();
+
+      if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
+        return true;
+      }
+      return false;
+    }
+  }, {
+    key: 'handleCollision',
+    value: function handleCollision() {
+      var _this2 = this;
+
+      var collLeft = this.collision.left,
+          collTop = this.collision.top,
+          collRight = this.collision.right,
+          collBottom = this.collision.bottom,
+          isCollLeft = collLeft.length > 0 ? true : false,
+          isCollTop = collTop.length > 0 ? true : false,
+          isCollRight = collRight.length > 0 ? true : false,
+          isCollBottom = collBottom.length > 0 ? true : false,
+          delta = {
+        x: this.dx,
+        y: this.dy
+      };
+
+      if (isCollTop) {
+        var typePriority = {
+          Spikes: false,
+          BouncingBox: false,
+          End: false,
+          Wall: false
+        };
+
+        collTop.forEach(function (_ref) {
+          var obj = _ref.obj,
+              callback = _ref.callback;
+
+          if (typePriority.hasOwnProperty(obj.type)) typePriority[obj.type] = { obj: obj, callback: callback };
+        });
+
+        var priorityArray = Object.values(typePriority),
+            objectToHandle = priorityArray.find(function (e) {
+          return e;
+        });
+
+        objectToHandle.callback(objectToHandle.obj, this, { x: this.dx, y: this.dy }, delta);
+      }
+
+      if (isCollBottom) {
+        collBottom.forEach(function (_ref2) {
+          var obj = _ref2.obj,
+              callback = _ref2.callback;
+
+          callback(obj, _this2, { x: _this2.dx, y: _this2.dy }, delta);
+        });
+      }
+
+      if (isCollLeft) {
+        collLeft.forEach(function (_ref3) {
+          var obj = _ref3.obj,
+              callback = _ref3.callback;
+
+          callback(obj, _this2, { x: _this2.dx, y: _this2.dy }, delta);
+        });
+      }
+
+      if (isCollRight) {
+        collRight.forEach(function (_ref4) {
+          var obj = _ref4.obj,
+              callback = _ref4.callback;
+
+          callback(obj, _this2, { x: _this2.dx, y: _this2.dy }, delta);
+        });
+      }
+      // console.log(this.dy)
+
+      this.collision.left = [];
+      this.collision.top = [];
+      this.collision.right = [];
+      this.collision.bottom = [];
     }
   }]);
 
@@ -1839,7 +2320,7 @@ module.exports = function (_Block) {
 
     _this.h = Game.cfg.scale * 2;
     _this.type = 'Spawn';
-    _this.color = 'blue';
+    _this.color = 'brown';
     _this.empty = true;
     _this.collision = false;
     return _this;
@@ -1863,10 +2344,10 @@ module.exports = function (_Block) {
 
 /***/ }),
 
-/***/ "./src/objects/spike.js":
-/*!******************************!*\
-  !*** ./src/objects/spike.js ***!
-  \******************************/
+/***/ "./src/objects/spikes.js":
+/*!*******************************!*\
+  !*** ./src/objects/spikes.js ***!
+  \*******************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1889,40 +2370,55 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 
 module.exports = function (_Block) {
-  _inherits(Spike, _Block);
+  _inherits(Spikes, _Block);
 
-  function Spike(x, y, Game) {
-    _classCallCheck(this, Spike);
+  function Spikes(x, y, Game) {
+    _classCallCheck(this, Spikes);
 
-    var _this = _possibleConstructorReturn(this, (Spike.__proto__ || Object.getPrototypeOf(Spike)).call(this, x, y, Game));
+    var _this = _possibleConstructorReturn(this, (Spikes.__proto__ || Object.getPrototypeOf(Spikes)).call(this, x, y, Game));
 
     _this.h = Game.cfg.scale / 2;
-    _this.type = 'Spike';
+    _this.type = 'Spikes';
     _this.color = 'gray';
     _this.empty = false;
     _this.collision = true;
     return _this;
   }
 
-  _createClass(Spike, [{
+  _createClass(Spikes, [{
     key: 'update',
     value: function update() {
       this.w = this.game.cfg.scale;
       this.h = this.game.cfg.scale / 2;
     }
   }, {
-    key: 'resolve',
-    value: function resolve(obj, side) {
-      if (obj.type != 'Player') return;
+    key: 'draw',
+    value: function draw() {
+      var game = this.game,
+          c = game.c,
+          scale = game.cfg.scale,
+          x = this.x * scale,
+          y = this.y * scale + (scale - this.h);
 
-      if (side === 'TOP') {
-        return obj.die();
-      }
-      this.normalCollision(obj, side);
+      c.beginPath();
+      c.drawImage(game.assets.img.Spikes.img, x, y, this.w + 1, this.h + 1);
+      c.closePath();
+    }
+  }, {
+    key: 'collisionTop',
+    value: function collisionTop(obj, player, newDelta, oldDelta) {
+      player.die();
+    }
+  }, {
+    key: 'resolve',
+    value: function resolve(player, side) {
+      if (player.type != 'Player') return;
+
+      this.normalCollision(player, side);
     }
   }]);
 
-  return Spike;
+  return Spikes;
 }(_block2.default);
 
 /***/ }),
@@ -2012,15 +2508,19 @@ module.exports = function (_Block) {
         this.tile.y = y * game.assets.tiles[this.tile.name].size + y * game.assets.tiles[this.tile.name].iY;
       }
     }
+
+    // collisionTop(obj) {
+    //   console.log('WALLTOP')
+    //   this.stopTop(obj)
+    // }
+
   }, {
     key: 'resolve',
-    value: function resolve(obj, side) {
-      // if(obj.type != 'Player') return
-      // console.log(side)
-      // console.log(
-      //   obj.dx, obj.dy
-      // )
-      this.normalCollision(obj, side);
+    value: function resolve(player, side) {
+      if (player.type != 'Player') return;
+
+      this.normalCollision(player, side);
+      // console.log(player.hasBounced)
     }
   }]);
 
@@ -2159,114 +2659,6 @@ function getTileValue(game, x, y) {
 
 /***/ }),
 
-/***/ "./src/toolbar.js":
-/*!************************!*\
-  !*** ./src/toolbar.js ***!
-  \************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-module.exports = function (game) {
-    // GameEngine UI
-    var form = document.createElement('form');
-
-    var playBtn = document.createElement('button');
-    playBtn.innerHTML = 'PLAY';
-    playBtn.onclick = function (e) {
-        e.preventDefault();
-        if (!game.playing[1]) {
-            game.playing[0] = true;
-            game.playing[1] = true;
-            game.cfg.updateAll = true;
-            game.init();
-            setTimeout(function () {
-                game.animate();
-            }, 500);
-            e.target.innerHTML = 'PAUSE';
-        } else {
-            if (game.playing[0]) {
-                e.target.innerHTML = 'PLAY';
-                game.playing[0] = false;
-            } else if (!game.playing[0]) {
-                game.playing[0] = true;
-                game.animate();
-                e.target.innerHTML = 'PAUSE';
-            }
-        }
-    };
-
-    // Colors selection
-    var inputColor = document.createElement('input');
-    inputColor.type = 'color';
-    inputColor.onchange = function (e) {
-        game.select.color = e.target.value;
-    };
-
-    var saveBtn = document.createElement('button');
-    saveBtn.innerHTML = 'SAVE';
-    saveBtn.onclick = function (e) {
-        e.preventDefault();
-
-        var str = '[';
-
-        game.map.forEach(function (a, aId) {
-            str += '[';
-            a.forEach(function (o, oId) {
-                if (o.empty) str += '' + 0 + (oId < a.length - 1 ? ', ' : '');else str += '' + JSON.stringify(flatten(o)) + (oId < a.length - 1 ? ', ' : '');
-            });
-            str += aId < game.map.length - 1 ? '], ' : ']';
-        });
-        str += ']';
-
-        copyToClipboard(str);
-        alert('The map has been copied on your clipboard');
-    };
-
-    form.append(playBtn);
-    form.append(inputColor);
-    form.append(saveBtn);
-    return form;
-};
-
-function copyToClipboard(text) {
-    var dummy = document.createElement("input");
-    document.body.appendChild(dummy);
-    dummy.setAttribute('value', text);
-    dummy.select();
-    document.execCommand("copy");
-    document.body.removeChild(dummy);
-}
-
-function flatten(obj) {
-    var result = Object.create(obj);
-    result.type = obj.type;
-    if (obj.tile) {
-        result.tile = {};
-        result.tile.name = obj.tile.name;
-        result.tile.value = obj.tile.value;
-    }
-    return result;
-}
-
-/*
-// brushsize selector
-const inputBrush = document.createElement('input');
-inputBrush.type = 'number'
-inputBrush.value = brushSize
-inputBrush.onchange = (e) => {
-    const value = e.target.value;
-    if(!isNaN(value) && (0 <= value && value <= 60)) brushSize = Number(e.target.value);
-}
-
-
-// form.append(inputBrush);
-*/
-
-/***/ }),
-
 /***/ "./src/update/edit.js":
 /*!****************************!*\
   !*** ./src/update/edit.js ***!
@@ -2351,7 +2743,7 @@ var Edit = function () {
       console.log('Start window Edit');
       var div = document.getElementById('game'),
           toolBar = __webpack_require__(/*! ../html_elements/toolbar */ "./src/html_elements/toolbar.js")(this.game);
-      div.append(toolBar);
+      div.insertBefore(toolBar, this.game.canvas);
 
       this.list.forEach(function (evt) {
         return _this.game.canvas.addEventListener(evt, _this, false);
@@ -2368,8 +2760,10 @@ var Edit = function () {
         return _this2.game.canvas.removeEventListener(evt, _this2, false);
       });
 
-      var elem = document.getElementById('toolbar');
+      var elem = document.getElementById('toolbar'),
+          style = document.getElementById('styleEdit');
       elem.parentNode.removeChild(elem);
+      style.parentNode.removeChild(style);
     }
   }, {
     key: "handleEvent",
@@ -2546,7 +2940,7 @@ Edit.prototype.checkForClicks = function () {
 
       (_cfg$updateArr = cfg.updateArr).push.apply(_cfg$updateArr, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, false, false)));
       cfg.updateArr.push({ x: gridX, y: gridY });
-    } else if (game.select.block.name === 'Spawn') {
+    } else if (game.select.block.name === 'Spawn' || game.select.block.name === 'End') {
       if (map[gridY - 1][gridX].type === 'Wall') {
         var _cfg$updateArr2;
 
@@ -2566,7 +2960,8 @@ Edit.prototype.checkForClicks = function () {
       }
 
       cfg.updateArr.push({ x: gridX, y: gridY - 1 }, { x: gridX, y: gridY });
-      select.options[3].disabled = true;
+      var optionId = game.select.block.name === 'Spawn' ? 3 : 4;
+      select.options[optionId].disabled = true;
       select.value = 'Wall';
       game.select.block = game.Objects.Wall;
     } else {
@@ -2587,7 +2982,10 @@ Edit.prototype.checkForClicks = function () {
 
     mouse.last.click = 'right';
 
-    if (cell.type === 'Spawn') select.options[3].disabled = false;
+    if (cell.type === 'Spawn' || cell.type === 'End') {
+      var optionId = cell.type === 'Spawn' ? 3 : 4;
+      select.options[optionId].disabled = false;
+    }
 
     map[gridY][gridX] = new this.game.Objects.Block(cell.x, cell.y, game);
 
@@ -2635,13 +3033,10 @@ module.exports = function () {
     this.game = game;
     this.list = "ontouchstart" in window ? ["touchstart", "touchmove", "touchend"] : ["mousedown", "mousemove", "mouseup", "keyup", "keydown"]; //, "wheel" , "mouseleave"
 
-    this.background = new Image();
-    this.background.src = './space-background.svg';
-    this.menu = false;
-
     this.startTime = 0;
     this.endTime = 0;
     this.pauseStart = 0;
+    this.timer = 0;
   }
 
   _createClass(Play, [{
@@ -2650,8 +3045,6 @@ module.exports = function () {
       var game = this.game;
       if (!game.playing[1]) return;
 
-      game.Camera();
-
       var cfg = game.cfg,
           scale = cfg.scale,
           canvas = game.canvas,
@@ -2659,24 +3052,14 @@ module.exports = function () {
           tY = game.translate.y,
           Player = game.Player,
           Engine = game.Engine,
-          map = game.map,
-          c = game.c,
-          mapWidth = cfg.cols * scale,
-          mapHeight = cfg.rows * scale,
-          imgHorizontal = mapWidth > mapHeight ? true : false,
-          imgWidth = imgHorizontal ? mapWidth : mapWidth / 1080 * 1920,
-          imgHeight = !imgHorizontal ? mapHeight : mapHeight / 1920 * 1080;
+          map = game.map;
 
       Engine.create(cfg.rows, cfg.cols, scale);
-      c.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Background
-      c.beginPath();
-      c.drawImage(this.background, tX, tY, imgWidth, imgHeight);
-      c.closePath();
-
-      c.save();
-      c.translate(tX, tY);
+      if (!Player.isDead && !Player.hide) {
+        Player.move();
+        Engine.insert(Player);
+      }
 
       var canvasCols = Math.ceil(canvas.width / scale);
       var canvasRows = Math.ceil(canvas.height / scale);
@@ -2689,23 +3072,68 @@ module.exports = function () {
 
           var cell = map[y][x];
           if (cell.empty) continue;
-          // if(typeof cell != Object) continue
 
           cell.update();
-          cell.draw();
           if (cell.collision) Engine.insert(cell);
         }
       }
 
-      if (!Player.isDead && !Player.hide) {
-        Player.actions();
-        Engine.insert(Player);
-      }
+      // Test block
+      this.Block = new game.Objects.Wall(10.628, 6, game);
+      this.Block.tile.value = 2;
+      this.Block.update();
+      Engine.insert(this.Block);
 
       Engine.checkCells();
       Player.update();
 
+      this.timer = Date.now() - this.startTime;
+    }
+  }, {
+    key: "draw",
+    value: function draw() {
+      var game = this.game;
+      if (!game.playing[1]) return;
+
+      var cfg = game.cfg,
+          scale = cfg.scale,
+          canvas = game.canvas,
+          tX = game.translate.x,
+          tY = game.translate.y,
+          Player = game.Player,
+          map = game.map,
+          c = game.c;
+      c.clearRect(0, 0, canvas.width, canvas.height);
+
+      game.Camera.update();
+
+      c.save();
+      c.translate(tX, tY);
+
+      Player.draw();
+
+      var canvasCols = Math.ceil(canvas.width / scale);
+      var canvasRows = Math.ceil(canvas.height / scale);
+      var xStart = Math.floor(tX / scale * -1) > 0 ? Math.floor(tX / scale * -1) : 0;
+      var yStart = Math.floor(tY / scale * -1) > 0 ? Math.floor(tY / scale * -1) : 0;
+
+      for (var y = yStart; y < canvasRows + yStart + 1; y++) {
+        for (var x = xStart; x < canvasCols + xStart + 1; x++) {
+          if (!map[y] || map[y] && !map[y][x]) continue;
+
+          var cell = map[y][x];
+          if (cell.empty) continue;
+
+          cell.draw();
+        }
+      }
+
+      // Test block
+      this.Block.draw();
+
       c.restore();
+
+      this.displayTimer();
     }
   }, {
     key: "startTimer",
@@ -2740,8 +3168,32 @@ module.exports = function () {
     value: function endTimer() {
       this.endTime = Date.now() - this.startTime;
       this.game.Player.hide = true;
-      console.log(this.startTime);
       console.log(this.game.utils.getTime(this.endTime));
+    }
+  }, {
+    key: "displayTimer",
+    value: function displayTimer() {
+      var game = this.game,
+          canvas = game.canvas,
+          c = game.c,
+          rectWidth = 300,
+          rectHeight = 50;
+
+      var time = this.endTime > 0 ? this.endTime : this.timer;
+      if (this.startTime === 0) time = 0;
+      c.font = "20pt Tahoma";
+      var str = game.utils.getTime(time),
+          size = game.utils.textSize(c, str);
+
+      c.beginPath();
+      c.fillStyle = "black";
+      c.fillRect(canvas.width / 2 - rectWidth / 2, 0, rectWidth, rectHeight);
+      c.closePath();
+
+      c.beginPath();
+      c.fillStyle = "white";
+      c.fillText(str, canvas.width / 2 - size[0] / 2, size[1] + 15);
+      c.closePath();
     }
   }, {
     key: "start",
@@ -2755,8 +3207,7 @@ module.exports = function () {
 
       var divGame = document.getElementById('game'),
           menu = __webpack_require__(/*! ../html_elements/playMenu */ "./src/html_elements/playMenu.js")(this.game);
-      divGame.appendChild(menu);
-      this.startTimer();
+      divGame.insertBefore(menu, this.game.canvas);
     }
   }, {
     key: "end",
@@ -2768,9 +3219,10 @@ module.exports = function () {
         return _this2.game.canvas.removeEventListener(evt, _this2, false);
       });
 
-      var divGame = document.getElementById('game'),
-          menu = document.getElementById('playMenu');
-      divGame.removeChild(menu);
+      var menu = document.getElementById('playMenu'),
+          style = document.getElementById('stylePlay');
+      menu.parentNode.removeChild(menu);
+      style.parentNode.removeChild(style);
 
       this.resetTimer();
     }
@@ -2891,12 +3343,11 @@ module.exports = function Utils(game) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
 
-  this.loadTiles = function (tile) {
+  this.loadImg = function (obj) {
     var img = new Image();
-    img.src = tile.url;
+    img.src = obj.url;
     img.addEventListener('load', function () {
-      tile.img = img;
-      console.log(tile.name, 'loaded.');
+      obj.img = img;
     }, false);
   };
 
@@ -2957,7 +3408,7 @@ module.exports = function Utils(game) {
     if (!_this.game.map[y]) return false;
     if (!_this.game.map[y][x]) return false;
     if (!_this.game.map[y][x].collision) return false;
-    return true;
+    return _this.game.map[y][x];
   };
 
   this.numberToClass = function (num) {
@@ -2972,7 +3423,7 @@ module.exports = function Utils(game) {
         return _this.game.Objects.BouncingBox;
 
       case 3:
-        return _this.game.Objects.Spike;
+        return _this.game.Objects.Spikes;
 
       case 4:
         return _this.game.Objects.Spawn;
@@ -3000,9 +3451,18 @@ module.exports = function Utils(game) {
 
   this.getTime = function (nb) {
     nb = Number(nb);
-    var ms = nb % 1000 | 0;
-    var sec = Math.floor(nb / 1000 % 60); //`${((nb/1000%60 | 0) < 10) ? '0' : ''}${nb/1000%60 | 0}`
-    var min = Math.floor(nb / 1000 / 60); //`${((nb/1000/60 | 0) < 10) ? '0' : ''}${nb/1000/60 | 0}`
+
+    if (nb === 0) return '00:00:00';
+
+    var msA = '' + Math.floor(nb % 1000);
+
+    // // 1000).toFixed(2)
+    if (msA > 1000) msA = (msA / 1000).toFixed(0); //* 10
+    else if (msA > 100) msA = (msA / 1000).toFixed(2) * 100;
+
+    var ms = '' + (msA < 10 ? '0' : '') + Math.round(msA);
+    var sec = '' + (Math.floor(nb / 1000 % 60) < 10 ? '0' : '') + Math.floor(nb / 1000 % 60);
+    var min = '' + (Math.floor(nb / 1000 / 60) < 10 ? '0' : '') + Math.floor(nb / 1000 / 60);
     return min + ':' + sec + ':' + ms;
   };
 };

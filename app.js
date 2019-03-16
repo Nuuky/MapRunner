@@ -7,6 +7,7 @@ const assets = require('./assets')
 
 app.use('/img', assets)
 app.use('/asset', express.static('asset'))
+app.use(express.static(path.join(__dirname)));
 
 
 app.get('/', async (req, res) => {
