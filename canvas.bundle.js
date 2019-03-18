@@ -2013,11 +2013,18 @@ module.exports = function (_Block) {
     _this.isCrouching = false;
 
     _this.keys = {
-      'ArrowLeft': false,
       'ArrowUp': false,
-      'ArrowRight': false,
+      'Space': false,
+      'KeyD': false,
+
+      'KeyS': false,
       'ArrowDown': false,
-      'Space': false
+      'ShiftLeft': false,
+
+      'ArrowLeft': false,
+      'ArrowRight': false,
+      'KeyA': false,
+      'KeyW': false
     };
 
     _this.collision = {
@@ -2140,35 +2147,38 @@ module.exports = function (_Block) {
           onFloor = this.isOnFloor,
           crouching = this.isCrouching,
           maxSpeed = this.maxSpeed,
-          accel = this.accel;
+          accel = this.accel,
+          key = this.keys,
+          left = key.ArrowLeft || key.KeyA ? true : false,
+          up = key.ArrowUp || key.KeyW || key.Space ? true : false,
+          right = key.ArrowRight || key.KeyD ? true : false,
+          down = key.ArrowDown || key.KeyS || key.ShiftLeft ? true : false;
 
       if (this.isDead || this.hide) return;
 
-      if (!this.keys.ArrowUp && !this.keys.Space) {
-        this.canJump = true;
-      }
-
-      if (this.keys.ArrowLeft) {
+      if (left) {
         if (!(crouching && Math.abs(dx) > maxSpeed)) {
           this.dx = Math.max(dx - accel, -maxSpeed);
         }
         this.isIdle = false;
       }
 
-      if (this.keys.ArrowRight) {
+      if (right) {
         if (!(crouching && Math.abs(dx) > maxSpeed)) {
           this.dx = Math.min(dx + accel, maxSpeed);
         }
         this.isIdle = false;
       }
 
-      if (this.keys.ArrowUp || this.keys.Space) {
+      if (up) {
         this.jump();
+      } else {
+        if (onFloor) this.canJump = true;
       }
 
-      if (!crouching && this.keys.ArrowDown) this.crouch();
+      if (!crouching && down) this.crouch();
 
-      if (crouching && !this.keys.ArrowDown) this.uncrouch();
+      if (crouching && !down) this.uncrouch();
 
       // GRAVITY AND FRICTIONS
       this.dy += this.gravity;
