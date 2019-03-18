@@ -184,7 +184,6 @@ var Button = function () {
   }, {
     key: 'destroy',
     value: function destroy() {
-      console.log('destroying');
       this.game.canvas.removeEventListener('mousemove', this.onOver);
       this.game.canvas.removeEventListener('click', this.click);
     }
@@ -218,35 +217,14 @@ var _game = __webpack_require__(/*! ./game */ "./src/game.js");
 
 var _game2 = _interopRequireDefault(_game);
 
-var _tilesManager = __webpack_require__(/*! ./tilesManager */ "./src/tilesManager.js");
-
-var _tilesManager2 = _interopRequireDefault(_tilesManager);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var gameDiv = document.getElementById('game');
 var canvas = document.getElementById('canvas');
 canvas.oncontextmenu = function (e) {
     return e.preventDefault();
 };
 canvas.width = innerWidth;
 canvas.height = innerHeight;
-
-//Keepfocusing Canvas
-// document.addEventListener('click', (e) => {
-//     e.target.focus()
-//     // e.stopPropagation()
-// })
-
-
-// canvas.onblur = function() {
-// 	this.style.background = 'transparent'
-// }
-
-// canvas.onfocus = function() {
-// 	this.style.background = 'red'
-// }
-
 
 // Game
 var Game = new _game2.default(canvas);
@@ -258,6 +236,7 @@ Game.select.tile = Game.assets.tiles.spaceGround;
 Game.cfg.scale = 64;
 Game.cfg.cols = 32;
 Game.cfg.rows = 32;
+Game.map = __webpack_require__(/*! ./json/map.json */ "./src/json/map.json").map;
 Game.translate.y = -(Game.cfg.rows * Game.cfg.scale) + canvas.height;
 
 // Load tiles
@@ -270,50 +249,21 @@ for (var i in Game.assets.img) {
     Game.utils.loadImg(Game.assets.img[i]);
 }
 
-Game.map = __webpack_require__(/*! ./json/map */ "./src/json/map.json");
-
 // Player
-Game.Player = new _objects2.default.Player(0, 0, 'James', Game); // x, y, w, h, name, Game)
+Game.Player = new _objects2.default.Player[0](5, 5, 'James', Game); // x, y, w, h, name, Game)
+
 
 // Implementation
+var mapInit = __webpack_require__(/*! ./initMap */ "./src/initMap.js");
 Game.init = function () {
-    if (!Game.map) {
-        Game.map = [];
-        for (var row = 0; row < Game.cfg.rows; row++) {
-            Game.map[row] = [];
-            for (var col = 0; col < Game.cfg.cols; col++) {
-                Game.map[row][col] = new Game.Objects.Block(col, row, Game);
-            }
-        }
-    } else {
-        var bouncingCalls = [9, 10, 11];
+    var save = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
 
-        for (var _row = 0; _row < Game.map.length; _row++) {
-            for (var _col = 0; _col < Game.map[0].length; _col++) {
-                var cell = Game.map[_row][_col];
-                if (typeof cell === 'number') {
-                    if (cell === 4) {
-                        Game.Player.respawn = [_col, _row - 1];
-                    }
+    if (save) mapInit.save(Game);
 
-                    var block = Game.utils.numberToClass(cell);
-                    Game.map[_row][_col] = new block(_col, _row, Game);
-                    // console.log(Game.map[row][col])
-                    if (Game.map[_row][_col].type === 'Wall') _tilesManager2.default.getValue(Game, _col, _row, false, false);
-                } else {
-                    if (cell.type === 'Spawn') {
-                        Game.Player.respawn = [_col, _row - 1];
-                    }
-
-                    var _block = new Game.Objects[cell.type](_col, _row, Game);
-                    Game.map[_row][_col] = Object.assign(_block, cell);
-                }
-            }
-        }
-    }
+    mapInit.load(Game);
 
     Game.Player.init();
-    Game.Camera = new Game.Objects.Camera(Game);
+    Game.Camera = new Game.Objects.Camera[0](Game);
     console.log("Lets go !");
 };
 
@@ -346,23 +296,22 @@ var framePerSeconds = setInterval(function () {
     fpsCount = 0;
 }, 1000);
 
-var mapWidth = Game.cfg.cols * Game.cfg.scale,
-    mapHeight = Game.cfg.rows * Game.cfg.scale,
-    halfMapWidth = mapWidth - canvas.width,
-    halfMapHeight = mapHeight - canvas.height;
-
 // Animation Loop
+var lastRender = Date.now();
 Game.animate = function () {
     now = Date.now();
     delta = now - then;
+
+    var dt = Date.now() - lastRender;
 
     if (delta > interval) {
         // console.log(delta)
         // console.time('check')
 
+
         // Game.dt = delta / 20//delta * 10
         if (Game.mode === 'play') {
-            Game.window.play.update();
+            Game.window.play.update(dt);
             Game.window.play.draw();
         } else if (Game.mode === 'edit') Game.window.edit.update();
 
@@ -373,6 +322,7 @@ Game.animate = function () {
 
         // console.timeEnd('check')
     }
+    lastRender = Date.now();
 
     if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
 };
@@ -382,12 +332,12 @@ var btn = new __webpack_require__(/*! ./button */ "./src/button.js");
 var btns = [];
 
 var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Story', 'test1', function () {
+    Game.mode = 'play';
     Game.init();
     Game.playing = [true, true];
     Game.cfg.updateAll = true;
 
     // Game.window[Game.mode].end()
-    Game.mode = 'play';
 
     Game.animate();
     Game.window[Game.mode].start();
@@ -397,13 +347,13 @@ var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Stor
 });
 
 var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, 'Map Maker', 'test2', function () {
+    Game.mode = 'edit';
     Game.init();
     setTimeout(function () {
         Game.playing = [true, true];
         Game.cfg.updateAll = true;
 
         // Game.window[Game.mode].end()
-        Game.mode = 'edit';
         Game.window[Game.mode].start();
 
         Game.animate();
@@ -560,9 +510,10 @@ module.exports = function () {
                 Ady = A.dy,
                 Bdx = B.dx,
                 Bdy = B.dy,
-                steps = 1;
+                steps = 1,
+                maxSpeed = 16;
 
-            if (Math.abs(A.dx) > 31 || Math.abs(A.dy) > 31 || Math.abs(B.dx) > 31 || Math.abs(B.dy) > 31) {
+            if (Math.abs(A.dx) > maxSpeed || Math.abs(A.dy) > maxSpeed || Math.abs(B.dx) > maxSpeed || Math.abs(B.dy) > maxSpeed) {
                 steps = 10;
             }
 
@@ -667,8 +618,6 @@ module.exports = function () {
 "use strict";
 
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _utils = __webpack_require__(/*! ./utils */ "./src/utils.js");
 
 var _utils2 = _interopRequireDefault(_utils);
@@ -689,152 +638,125 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Game = function () {
-  function Game(canvas) {
-    _classCallCheck(this, Game);
+var Game = function Game(canvas) {
+  _classCallCheck(this, Game);
 
-    this.canvas = canvas;
-    this.c = canvas.getContext('2d');
+  this.canvas = canvas;
+  this.c = canvas.getContext('2d');
 
-    this.map = null;
+  this.map = null;
+  this.firstInit = true;
 
-    this.Player = undefined;
+  this.background = [];
+  this.static = [];
+  this.moving = [];
+  this.foreground = [];
 
-    this.Objects = __webpack_require__(/*! ./objects */ "./src/objects.js");
+  this.Player = undefined;
 
-    this.utils = new _utils2.default(this);
+  this.Objects = __webpack_require__(/*! ./objects */ "./src/objects.js");
 
-    this.cfg = {
-      name: "default",
-      cols: null,
-      rows: null,
-      scale: 64,
-      updateArr: [],
-      updateAll: false
-    };
+  this.editObjects = Object.values(this.Objects).filter(function (o) {
+    return typeof o[1] === 'number';
+  });
 
-    this.mode = "edit";
+  this.utils = new _utils2.default(this);
 
-    this.Engine = new _engine2.default(this.c, this.cfg.cols, this.cfg.rows, this.cfg.scale);
+  this.cfg = {
+    name: "default",
+    cols: null,
+    rows: null,
+    scale: 64,
+    oldScale: 64,
+    updateArr: [[], [], [], []],
+    updateAll: false
+  };
 
-    this.Camera = new this.Objects.Camera(this);
+  this.mode = "edit";
 
-    this.assets = {
-      tiles: {},
-      textures: {}
-    };
+  this.Engine = new _engine2.default(this.c, this.cfg.cols, this.cfg.rows, this.cfg.scale);
 
-    this.translate = {
-      x: 0,
-      y: 0
-    };
+  this.Camera = new this.Objects.Camera[0](this);
 
-    this.playing = [false, false], this.select = {
-      color: 'blue',
-      brushSize: 0,
-      block: this.Objects.Wall,
-      tile: this.assets.tiles.spaceGround
-    };
+  this.assets = {
+    tiles: {},
+    textures: {}
+  };
 
-    this.mouse = {
+  this.translate = {
+    x: 0,
+    y: 0
+  };
+
+  this.playing = [false, false];
+
+  this.select = {
+    color: 'blue',
+    brushSize: 0,
+    block: null,
+    tile: this.assets.tiles.spaceGround,
+    layer: null
+  };
+
+  this.mouse = {
+    x: null,
+    y: null,
+    gridX: 0,
+    gridY: 0,
+    left: false,
+    right: false,
+    click: null,
+
+    middle: {
+      click: false,
       x: null,
-      y: null,
-      gridX: 0,
-      gridY: 0,
-      left: false,
-      right: false,
-      click: null,
-      middle: {
-        click: false,
-        x: null,
-        y: null
-      },
-      last: {
-        gridX: undefined,
-        gridY: undefined,
-        click: "nop"
-      }
-    };
+      y: null
+    },
 
-    this.message = {
-      game: this,
-      list: [],
-      fontSize: 35,
-      offX: 200,
-      offY: 100,
-      error: function error(msg) {
-        var _this = this.game,
-            c = _this.c,
-            canvas = _this.canvas,
-            h = this.fontSize * 1.2;
-        msg = 'Vous êtes mort !';
-
-        //const size = _this.utils.textSize(msg, 'Arial', this.fontSize, false)
-        c.font = this.fontSize + 'pt Tahoma';
-        var size = [c.measureText(msg).width, parseInt(c.font.match(/\d+/), 10) * 0.7];
-        console.log(size);
-        var textWidth = c.measureText(msg).width;
-        c.beginPath();
-        c.fillStyle = 'black';
-        c.fillRect(canvas.width / 2 - (size[0] + this.offX) / 2, canvas.height / 2 - (size[1] + this.offY) / 2, textWidth + this.offX, size[1] + this.offY);
-        c.closePath();
-
-        c.beginPath();
-        c.fillStyle = 'red';
-        c.fillText(msg, canvas.width / 2 - size[0] / 2, canvas.height / 2 + size[1] / 2);
-        c.closePath();
-      }
-    };
-
-    //this.events = new Events(this)
-
-    this.window = {
-      play: new _play2.default(this),
-      edit: new _edit2.default(this)
-    };
-  }
-
-  // menu() {
-  //   require('./menu')(this)
-  // }
-
-  _createClass(Game, [{
-    key: 'updateMap',
-    value: function updateMap() {
-      if (this.cfg.updateAll || !this.editor) {
-        var scale = this.cfg.scale,
-            canvas = this.canvas,
-            tX = this.translate.x,
-            tY = this.translate.y;
-
-        var canvasCols = Math.ceil(canvas.width / scale);
-        var canvasRows = Math.ceil(canvas.height / scale);
-        var xStart = Math.floor(tX / scale * -1) > 0 ? Math.floor(tX / scale * -1) : 0;
-        var yStart = Math.floor(tY / scale * -1) > 0 ? Math.floor(tY / scale * -1) : 0;
-
-        for (var y = yStart; y < canvasRows + yStart + 1; y++) {
-          for (var x = xStart; x < canvasCols + xStart + 1; x++) {
-            if (!this.map[y]) continue;
-            if (!this.map[y][x]) continue;
-            if (!this.editor && this.map[y][x].empty) continue;
-            this.map[y][x].update();
-            this.map[y][x].draw();
-            if (this.map[y][x].collision) this.Engine.insert(this.map[y][x]);
-          }
-        }
-        this.cfg.updateAll = false;
-      } else if (this.cfg.updateArr.length > 0) {
-        for (var i = 0; i < this.cfg.updateArr.length; i++) {
-          this.map[this.cfg.updateArr[i].y][this.cfg.updateArr[i].x].draw(this);
-        }
-
-        this.cfg.updateArr = [];
-      }
+    last: {
+      gridX: undefined,
+      gridY: undefined,
+      click: "nop"
     }
-  }]);
+  };
 
-  return Game;
-}();
+  this.message = {
+    game: this,
+    list: [],
+    fontSize: 35,
+    offX: 200,
+    offY: 100,
+    error: function error(msg) {
+      var _this = this.game,
+          c = _this.c,
+          canvas = _this.canvas,
+          h = this.fontSize * 1.2;
+      msg = 'Vous êtes mort !';
+
+      //const size = _this.utils.textSize(msg, 'Arial', this.fontSize, false)
+      c.font = this.fontSize + 'pt Tahoma';
+      var size = [c.measureText(msg).width, parseInt(c.font.match(/\d+/), 10) * 0.7];
+      console.log(size);
+      var textWidth = c.measureText(msg).width;
+      c.beginPath();
+      c.fillStyle = 'black';
+      c.fillRect(canvas.width / 2 - (size[0] + this.offX) / 2, canvas.height / 2 - (size[1] + this.offY) / 2, textWidth + this.offX, size[1] + this.offY);
+      c.closePath();
+
+      c.beginPath();
+      c.fillStyle = 'red';
+      c.fillText(msg, canvas.width / 2 - size[0] / 2, canvas.height / 2 + size[1] / 2);
+      c.closePath();
+    }
+  };
+
+  //this.events = new Events(this)
+
+  this.window = {
+    play: new _play2.default(this),
+    edit: new _edit2.default(this)
+  };
+};
 
 Game.prototype.Camera = function () {
   if (this.editor) return;
@@ -854,6 +776,7 @@ Game.prototype.Camera = function () {
 
   if (!isOffsetX) tx = canvas.width / 2 - mapWidth / 2;
   if (!isOffsetY) ty = canvas.height / 2 - mapHeight / 2;
+
   if (isOffsetX && Player.getHalfWidth() <= canvas.width / 2) tx = 0;else if (isOffsetX && Player.getHalfWidth() >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
   if (isOffsetY && Player.getHalfHeight() <= canvas.height / 2) ty = 0;else if (isOffsetY && Player.getHalfHeight() >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
 
@@ -1079,37 +1002,80 @@ module.exports = function (game) {
   colSpan.appendChild(inputCols);
   div.appendChild(colSpan);
 
-  // SELECT BLOCK
-  var blockTypes = ['Wall', 'BouncingBox', 'Spikes', 'Spawn', 'End'],
-      selectBlock = document.createElement('select');
-  selectBlock.id = 'selectBlock';
+  // SELECT LAYER
+  var layerName = ['special', 'foreground', 'moving', 'static', 'background'],
+      layerBlock = document.createElement('select');
+  layerBlock.id = 'layerBlock';
 
-  var hasSpawn = typeExist('Spawn', game),
-      hasEnd = typeExist('End', game);
-
-  for (var i = 0; i < blockTypes.length; i++) {
+  for (var i = 0; i < layerName.length; i++) {
     var option = document.createElement("option");
-    option.value = blockTypes[i];
-    option.text = blockTypes[i];
-    if (blockTypes[i] === 'Spawn' && hasSpawn) option.disabled = true;else if (blockTypes[i] === 'End' && hasEnd) option.disabled = true;
-    selectBlock.appendChild(option);
+    option.value = layerName[i];
+    option.text = layerName[i];
+    layerBlock.appendChild(option);
   }
 
-  selectBlock.value = 'Wall';
-  game.select.block = game.Objects.Wall;
+  layerBlock.value = 'static';
+  game.select.layer = 'static';
 
-  selectBlock.style.display = 'block';
-  selectBlock.onchange = function (e) {
+  layerBlock.style.display = 'block';
+  layerBlock.onchange = function (e) {
     var id = e.target.selectedIndex,
         value = e.target[id].value;
-    game.select.block = game.Objects[value];
+    game.select.layer = value;
+
+    document.dispatchEvent(refreshBlockType);
   };
+  var layerSpan = document.createElement('span');
+  layerSpan.innerHTML = 'Layer ';
+  layerSpan.classList.add('dispBlock');
+  layerSpan.id = 'selectSpan';
+  layerSpan.appendChild(layerBlock);
+  div.appendChild(layerSpan);
+
+  // SELECT BLOCK
   var selectSpan = document.createElement('span');
-  selectSpan.innerHTML = 'Block Type: ';
   selectSpan.classList.add('dispBlock');
   selectSpan.id = 'selectSpan';
-  selectSpan.appendChild(selectBlock);
   div.appendChild(selectSpan);
+
+  function makeBlockSelect() {
+    selectSpan.innerHTML = 'Block Type: ';
+
+    var selectBlock = document.createElement('select');
+    selectBlock.id = 'selectBlock';
+
+    var hasSpawn = typeExist('Spawn', game.static),
+        hasEnd = typeExist('End', game.static);
+
+    var option = document.createElement("option");
+    selectBlock.appendChild(option);
+    for (var i = 0; i < game.editObjects.length; i++) {
+      var obj = game.editObjects[i],
+          layer = game.select.layer;
+
+      if (obj[2] != layer) continue;
+
+      option = document.createElement("option");
+      option.value = obj[0].name;
+      option.text = obj[0].name;
+      if (obj[1] === 4 && hasSpawn) option.disabled = true;else if (obj[1] === 5 && hasEnd) option.disabled = true;
+      selectBlock.appendChild(option);
+    }
+
+    selectBlock.style.display = 'block';
+    selectBlock.onchange = function (e) {
+      var id = e.target.selectedIndex,
+          value = e.target[id].value;
+      game.select.block = game.Objects[value];
+    };
+
+    selectSpan.appendChild(selectBlock);
+  }
+
+  window.refreshBlockType = new Event('refreshBlockType');
+  document.addEventListener('refreshBlockType', makeBlockSelect, false);
+
+  document.dispatchEvent(refreshBlockType);
 
   // BLOCK PARAMS
 
@@ -1128,8 +1094,8 @@ module.exports = function (game) {
   btnPlay.onclick = function (e) {
     // e.preventDefault()
 
-    var hasSpawn = typeExist('Spawn', game),
-        hasEnd = typeExist('End', game);
+    var hasSpawn = typeExist('Spawn', game.static),
+        hasEnd = typeExist('End', game.static);
 
     if (!hasSpawn || !hasEnd) {
       return errorMsg.innerHTML = 'You can\'t play without ' + (!hasSpawn ? 'Spawn' : 'End') + ' block !';
@@ -1138,7 +1104,7 @@ module.exports = function (game) {
     game.window[game.mode].end();
     game.mode = 'play';
 
-    game.init();
+    game.init(true);
     game.playing = [true, true];
     game.cfg.updateAll = true;
     game.canvas.focus();
@@ -1155,16 +1121,37 @@ module.exports = function (game) {
   btnSave.onclick = function (e) {
     // e.preventDefault();
 
-    var str = '[';
+    var str = '';
 
-    game.map.forEach(function (a, aId) {
-      str += '[';
-      a.forEach(function (o, oId) {
-        str += '' + (typeof classToNumber(o.type) === 'number' ? classToNumber(o.type) : JSON.stringify(flatten(o))) + (oId < a.length - 1 ? ', ' : '');
-      });
-      str += aId < game.map.length - 1 ? '], ' : ']';
+    var layerName = ['background', 'static', 'moving', 'foreground'],
+        mapTest = game.static;
+
+    var _loop = function _loop(row) {
+      var _loop2 = function _loop2(col) {
+        layerName.forEach(function (name, id) {
+          var layer = game[name];
+          if (!layer[row][col]) str += '#';else str += layer[row][col].id;
+
+          str += id + 1 < layerName.length ? '.' : '';
+        });
+
+        str += col + 1 < mapTest[0].length ? '-' : '';
+      };
+
+      for (var col = 0; col < mapTest[0].length; col++) {
+        _loop2(col);
+      }
+
+      str += row + 1 < mapTest.length ? ',' : '';
+    };
+
+    for (var row = 0; row < mapTest.length; row++) {
+      _loop(row);
+    }
+
+    layerName.forEach(function (name) {
+      var layer = game[name];
     });
-    str += ']';
 
     copyToClipboard(str);
     alert('The map has been copied on your clipboard');
@@ -1230,14 +1217,112 @@ function classToNumber(className) {
   }
 }
 
-function typeExist(type, game) {
-  var map = game.map;
+function typeExist(type, map) {
   for (var row = 0; row < map.length; row++) {
     if (map[row].some(function (cell) {
       return cell.type === type;
     })) return true;
   }
 }
+
+/***/ }),
+
+/***/ "./src/initMap.js":
+/*!************************!*\
+  !*** ./src/initMap.js ***!
+  \************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _tilesManager = __webpack_require__(/*! ./tilesManager */ "./src/tilesManager.js");
+
+var _tilesManager2 = _interopRequireDefault(_tilesManager);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+module.exports.load = function (Game) {
+    if (Game.firstInit) {
+        var map = Game.map.split(',');
+
+        map.map(function (row, rID) {
+            map[rID] = row.split('-');
+            map[rID].map(function (cell, cID) {
+                map[rID][cID] = cell.split('.');
+                map[rID][cID] = map[rID][cID].map(function (e) {
+                    if (e != '#') return Number(e);else return '#';
+                });
+            });
+        });
+
+        Game.map = map;
+        Game.firstInit = false;
+    }
+
+    var _loop = function _loop(row) {
+        var _loop2 = function _loop2(col) {
+            var cell = Game.map[row][col];
+
+            var layerName = ['background', 'static', 'moving', 'foreground'];
+            cell.forEach(function (layer, id) {
+                var mapLayer = Game[layerName[id]];
+
+                if (!mapLayer[row]) mapLayer[row] = [];
+                if (layer === '#') return mapLayer[row][col] = 0;
+
+                var block = Game.editObjects.find(function (b) {
+                    return b[1] == layer;
+                });
+
+                switch (layer) {
+                    case 1:
+                        mapLayer[row][col] = new block[0](col, row, Game);
+                        _tilesManager2.default.getValue(Game, col, row, false, false);
+                        break;
+
+                    case 4:
+                        Game.Player.respawn = [col, row - 1];
+                        mapLayer[row][col] = new block[0](col, row, Game);
+                        Game[layerName[0]][row][col] = new Game.Objects.Block[0](col, row, Game);
+                        break;
+
+                    default:
+                        mapLayer[row][col] = new block[0](col, row, Game);
+
+                }
+            });
+        };
+
+        for (var col = 0; col < Game.map[0].length; col++) {
+            _loop2(col);
+        }
+    };
+
+    for (var row = 0; row < Game.map.length; row++) {
+        _loop(row);
+    }
+};
+
+module.exports.save = function (Game) {
+    var map = [];
+
+    var layerName = ['background', 'static', 'moving', 'foreground'];
+    layerName.forEach(function (name, id) {
+        var layer = Game[name];
+        layer.forEach(function (row, y) {
+            if (!map[y]) map[y] = [];
+
+            row.forEach(function (col, x) {
+                if (!map[y][x]) map[y][x] = [];
+                map[y][x][id] = col ? col.id : '#';
+            });
+        });
+    });
+
+    Game.map = map;
+};
 
 /***/ }),
 
@@ -1256,10 +1341,10 @@ module.exports = {"Spikes":{"name":"Spikes","url":"./img/spikes.png","img":null}
 /*!***************************!*\
   !*** ./src/json/map.json ***!
   \***************************/
-/*! exports provided: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, default */
+/*! exports provided: map, default */
 /***/ (function(module) {
 
-module.exports = [[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,1],[1,1,1,1,1,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,0,0,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,1,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,1],[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,0,0,0,0,2,2,2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1],[1,1,1,4,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,3,3,1,1,1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]];
+module.exports = {"map":"#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.5.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.6.#.#-0.6.7.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.2.#.#-0.2.#.#-0.2.#.#-0.2.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-0.4.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.3.#.#-0.3.#.#-0.3.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#"};
 
 /***/ }),
 
@@ -1291,21 +1376,28 @@ var _tilesManager2 = _interopRequireDefault(_tilesManager);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 module.exports = {
-  Block: __webpack_require__(/*! ./objects/block */ "./src/objects/block.js"),
+  // GAME OBJECTS
+  Player: [__webpack_require__(/*! ./objects/player */ "./src/objects/player.js")],
 
-  Wall: __webpack_require__(/*! ./objects/wall */ "./src/objects/wall.js"),
+  Camera: [__webpack_require__(/*! ./objects/camera */ "./src/objects/camera.js")],
 
-  Player: __webpack_require__(/*! ./objects/player */ "./src/objects/player.js"),
+  // MAP OBJECTS: [CLASS, ID, PURPOSE, LINK]
 
-  BouncingBox: __webpack_require__(/*! ./objects/bouncingBox */ "./src/objects/bouncingBox.js"),
+  Block: [__webpack_require__(/*! ./objects/block */ "./src/objects/block.js"), 0, ['background']],
 
-  Spikes: __webpack_require__(/*! ./objects/spikes */ "./src/objects/spikes.js"),
+  Wall: [__webpack_require__(/*! ./objects/wall */ "./src/objects/wall.js"), 1, ['static']],
 
-  Spawn: __webpack_require__(/*! ./objects/spawn */ "./src/objects/spawn.js"),
+  BouncingBox: [__webpack_require__(/*! ./objects/bouncingBox */ "./src/objects/bouncingBox.js"), 2, ['static']],
 
-  End: __webpack_require__(/*! ./objects/end */ "./src/objects/end.js"),
+  Spikes: [__webpack_require__(/*! ./objects/spikes */ "./src/objects/spikes.js"), 3, ['static']],
 
-  Camera: __webpack_require__(/*! ./objects/camera */ "./src/objects/camera.js")
+  Spawn: [__webpack_require__(/*! ./objects/spawn */ "./src/objects/spawn.js"), 4, ['special']],
+
+  End: [__webpack_require__(/*! ./objects/end */ "./src/objects/end.js"), 5, ['special']],
+
+  SwordSupport: [__webpack_require__(/*! ./objects/swordSupport */ "./src/objects/swordSupport.js"), 6, ['static']],
+
+  Sword: [__webpack_require__(/*! ./objects/sword */ "./src/objects/sword.js"), 7, ['moving'], 'SwordSupport']
 };
 
 /***/ }),
@@ -1338,16 +1430,20 @@ module.exports = function () {
     this.h = Game.cfg.scale;
     this.dx = 0;
     this.dy = 0;
-    this.color = 'white';
-    this.empty = true;
+    this.color = '#111115';
+    this.empty = false;
     this.collision = false;
+
+    this.id = 0;
+    this.purpose = ['Background'];
+    this.link = false;
   }
 
   _createClass(Block, [{
     key: 'getLeft',
     value: function getLeft(displayDelta) {
       var scale = this.game.cfg.scale;
-      return this.x * scale + (displayDelta ? this.dx : 0);
+      return this.x * scale + (scale - this.w) + (displayDelta ? this.dx : 0);
     }
   }, {
     key: 'getTop',
@@ -1380,14 +1476,16 @@ module.exports = function () {
     value: function draw() {
       var c = this.game.c,
           scale = this.game.cfg.scale,
-          x = this.x * scale,
+          x = this.x * scale + (scale - this.w),
           y = this.y * scale + (scale - this.h);
 
       c.beginPath();
-      c.rect(x, y, this.w, this.h);
       c.fillStyle = this.color;
-      c.stroke();
+      c.strokeStyle = 'gray';
+      c.lineWidth = 1;
+      c.rect(x, y, this.w + 1, this.h + 1);
       c.fill();
+      if (this.game.mode === 'edit') c.stroke();
       c.closePath();
     }
   }, {
@@ -1396,6 +1494,11 @@ module.exports = function () {
       var scale = this.game.cfg.scale;
       this.w = scale;
       this.h = scale;
+    }
+  }, {
+    key: 'editUpdate',
+    value: function editUpdate() {
+      this.update();
     }
   }, {
     key: 'collisionLeft',
@@ -1446,9 +1549,7 @@ module.exports = function () {
   }, {
     key: 'normalCollision',
     value: function normalCollision(obj, side) {
-      var objHalfHeight = this.h / 2 | 0,
-          objHalfWidth = this.h / 2 | 0,
-          objMovingLeft = obj.dx < 0 ? true : false,
+      var objMovingLeft = obj.dx < 0 ? true : false,
           objMovingRight = obj.dx > 0 ? true : false,
           objMovingTop = obj.dy < 0 ? true : false,
           objMovingBottom = obj.dy > 0 ? true : false,
@@ -1615,6 +1716,9 @@ module.exports = function (_Block) {
     _this.color = 'purple';
     _this.empty = false;
     _this.collision = true;
+
+    _this.id = 2;
+    _this.purpose = ['Static'];
     return _this;
   }
 
@@ -1709,118 +1813,66 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Camera = function () {
-    function Camera(game) {
-        _classCallCheck(this, Camera);
+  function Camera(game) {
+    _classCallCheck(this, Camera);
 
-        this.game = game;
-        this.x = 0;
-        this.y = 0;
-        this.oldX = 0;
-        this.oldY = 0;
+    this.game = game;
+    this.x = 0;
+    this.y = 0;
+    this.oldX = 0;
+    this.oldY = 0;
+  }
 
-        this.background = new Image();
-        this.background.src = 'https://cdn.glitch.com/e683167b-6e53-40d8-9a05-e24a714a856d%2Fspace-background.svg?1551610099211';
-        this.imgWidth = 0;
-        this.imgHeight = 0;
+  _createClass(Camera, [{
+    key: "update",
+    value: function update() {
+      var game = this.game,
+          canvas = game.canvas,
+          Player = game.Player,
+          scale = game.cfg.scale,
+          mapWidth = game.cfg.cols * scale,
+          mapHeight = game.cfg.rows * scale,
+          halfMapWidth = mapWidth - canvas.width,
+          halfMapHeight = mapHeight - canvas.height,
+          isOffsetX = canvas.width < mapWidth ? true : false,
+          isOffsetY = canvas.height < mapHeight ? true : false,
+          imgHorizontal = mapWidth > mapHeight ? true : false,
+          PlayerHalfWidth = Player.camX + Player.w / 2,
+          PlayerHalfHeight = Player.camY + Player.h / 2;
 
-        this.backgroundOffX = 0;
-        this.backgroundOffY = 0;
+      var tx = -PlayerHalfWidth + canvas.width / 2,
+          ty = -PlayerHalfHeight + canvas.height / 2;
 
-        this.started = false;
-        this.bgStartX = 0;
-        this.bgStartY = 0;
+      if (!isOffsetX) tx = canvas.width / 2 - mapWidth / 2;
+      if (!isOffsetY) ty = canvas.height / 2 - mapHeight / 2;
 
-        var imgHorizontal = game.cfg.cols > game.cfg.rows ? true : false,
-            cellsMax = (imgHorizontal ? game.cfg.cols : game.cfg.rows) * game.cfg.scale;
+      if (isOffsetX && PlayerHalfWidth <= canvas.width / 2) tx = 0;else if (isOffsetX && PlayerHalfWidth >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
 
-        this.imgWidth = imgHorizontal ? cellsMax : cellsMax / 9 * 16;
-        this.imgHeight = !imgHorizontal ? cellsMax : cellsMax / 16 * 9;
+      if (isOffsetY && PlayerHalfHeight <= canvas.height / 2) ty = 0;else if (isOffsetY && PlayerHalfHeight >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
+
+      if (!Player.isDead) {
+        game.translate.x = tx;
+        game.translate.y = ty;
+        this.x = game.translate.x;
+        this.y = game.translate.y;
+      } else {
+        // If Camera POS === Player Respawn POS
+        if (game.translate.x == tx && game.translate.y == ty) {
+          Player.spawn();
+        } else {
+          game.translate.x = game.utils.lerp(game.translate.x, tx, 0.2);
+          game.translate.y = game.utils.lerp(game.translate.y, ty, 0.2);
+          this.x = game.translate.x;
+          this.y = game.translate.y;
+        }
+      }
+
+      this.oldX = this.x;
+      this.oldY = this.y;
     }
+  }]);
 
-    _createClass(Camera, [{
-        key: 'update',
-        value: function update() {
-            var game = this.game,
-                canvas = game.canvas,
-                Player = game.Player,
-                scale = game.cfg.scale,
-                mapWidth = game.cfg.cols * scale,
-                mapHeight = game.cfg.rows * scale,
-                halfMapWidth = mapWidth - canvas.width,
-                halfMapHeight = mapHeight - canvas.height,
-                isOffsetX = canvas.width < mapWidth ? true : false,
-                isOffsetY = canvas.height < mapHeight ? true : false,
-                imgHorizontal = mapWidth > mapHeight ? true : false,
-                PlayerHalfWidth = Player.camX + Player.w / 2,
-                PlayerHalfHeight = Player.camY + Player.h / 2;
-
-            var tx = -PlayerHalfWidth + canvas.width / 2,
-                ty = -PlayerHalfHeight + canvas.height / 2;
-
-            if (!isOffsetX) tx = canvas.width / 2 - mapWidth / 2;
-            if (!isOffsetY) ty = canvas.height / 2 - mapHeight / 2;
-
-            if (isOffsetX && PlayerHalfWidth <= canvas.width / 2) tx = 0;else if (isOffsetX && PlayerHalfWidth >= mapWidth - canvas.width / 2) tx = -halfMapWidth;
-
-            if (isOffsetY && PlayerHalfHeight <= canvas.height / 2) ty = 0;else if (isOffsetY && PlayerHalfHeight >= mapHeight - canvas.height / 2) ty = -halfMapHeight;
-
-            if (!Player.isDead) {
-                game.translate.x = tx;
-                game.translate.y = ty;
-                this.x = game.translate.x;
-                this.y = game.translate.y;
-            } else {
-                // If Camera POS === Player Respawn POS
-                if (game.translate.x == tx && game.translate.y == ty) {
-                    Player.spawn();
-                } else {
-                    game.translate.x = game.utils.lerp(game.translate.x, tx, 0.2);
-                    game.translate.y = game.utils.lerp(game.translate.y, ty, 0.2);
-                    this.x = game.translate.x;
-                    this.y = game.translate.y;
-                }
-            }
-            if (!this.started) {
-                this.bgStartX = this.x;
-                this.bgStartY = this.y;
-                console.log('Camera Started');
-            }
-            this.updateBg();
-
-            this.oldX = this.x;
-            this.oldY = this.y;
-        }
-    }, {
-        key: 'updateBg',
-        value: function updateBg() {
-
-            // this.backgroundOffX += (this.started) ? (this.x - this.oldX)/10 : 0
-            // this.backgroundOffY += (this.started) ? (this.y - this.oldY)/10 : 0
-
-            var game = this.game,
-                c = game.c,
-                canvas = game.canvas;
-
-            // c.beginPath()
-            // c.drawImage(
-            //   this.background, 
-            //   this.bgStartX + this.backgroundOffX, 
-            //   this.bgStartY + this.backgroundOffY,// this.y,
-            //   this.imgWidth, 
-            //   this.imgHeight
-            // )
-            // c.closePath()
-
-            c.beginPath();
-            c.fillStyle = '#111115';
-            c.fillRect(0, 0, canvas.width, canvas.height);
-            c.closePath();
-
-            if (!this.started) this.started = true;
-        }
-    }]);
-
-    return Camera;
+  return Camera;
 }();
 
 module.exports = Camera;
@@ -1865,12 +1917,20 @@ module.exports = function (_Block) {
     _this.color = 'cyan';
     _this.empty = false;
     _this.collision = true;
+
+    _this.id = 5;
+    _this.purpose = ['Special'];
     return _this;
   }
 
   _createClass(End, [{
     key: 'update',
     value: function update() {
+      this.editUpdate();
+    }
+  }, {
+    key: 'editUpdate',
+    value: function editUpdate() {
       this.w = this.game.cfg.scale;
       this.h = this.game.cfg.scale * 2;
     }
@@ -1957,8 +2017,7 @@ module.exports = function (_Block) {
       'ArrowUp': false,
       'ArrowRight': false,
       'ArrowDown': false,
-      'SpaceDown': false,
-      'SpaceBarre': false
+      'Space': false
     };
 
     _this.collision = {
@@ -2029,8 +2088,8 @@ module.exports = function (_Block) {
           cfg = game.cfg,
           col = Math.floor(this.x / cfg.scale),
           row = Math.floor(this.y / cfg.scale),
-          blockTopLeft = game.map[row - 1][col],
-          blockTopRight = game.map[row - 1][col + 1],
+          blockTopLeft = game.static[row - 1][col],
+          blockTopRight = game.static[row - 1][col + 1],
           isCollidingTopLeft = this.isColliding(blockTopLeft, this),
           isCollidingTopRight = this.isColliding(blockTopRight, this);
 
@@ -2063,6 +2122,7 @@ module.exports = function (_Block) {
       if (this.isDead || this.hide) return;
 
       var c = this.game.c;
+
       c.beginPath();
       c.rect(this.x, this.y, this.w, this.h);
       c.fillStyle = this.color;
@@ -2071,42 +2131,51 @@ module.exports = function (_Block) {
     }
   }, {
     key: 'move',
-    value: function move() {
+    value: function move(d) {
+      var dt = d / 10;
       this.isIdle = true;
+
+      var dx = this.dx,
+          dy = this.dy,
+          onFloor = this.isOnFloor,
+          crouching = this.isCrouching,
+          maxSpeed = this.maxSpeed,
+          accel = this.accel;
+
       if (this.isDead || this.hide) return;
 
-      if (!this.keys.ArrowUp) {
+      if (!this.keys.ArrowUp && !this.keys.Space) {
         this.canJump = true;
       }
 
       if (this.keys.ArrowLeft) {
-        if (!(this.isCrouching && Math.abs(this.dx) > this.maxSpeed)) {
-          this.dx = Math.max(this.dx - this.accel, -this.maxSpeed);
+        if (!(crouching && Math.abs(dx) > maxSpeed)) {
+          this.dx = Math.max(dx - accel, -maxSpeed);
         }
         this.isIdle = false;
       }
 
       if (this.keys.ArrowRight) {
-        if (!(this.isCrouching && Math.abs(this.dx) > this.maxSpeed)) {
-          this.dx = Math.min(this.dx + this.accel, this.maxSpeed);
+        if (!(crouching && Math.abs(dx) > maxSpeed)) {
+          this.dx = Math.min(dx + accel, maxSpeed);
         }
         this.isIdle = false;
       }
 
-      if (this.keys.ArrowUp) {
+      if (this.keys.ArrowUp || this.keys.Space) {
         this.jump();
       }
 
-      if (!this.isCrouching && this.keys.ArrowDown) this.crouch();
+      if (!crouching && this.keys.ArrowDown) this.crouch();
 
-      if (this.isCrouching && !this.keys.ArrowDown) this.uncrouch();
+      if (crouching && !this.keys.ArrowDown) this.uncrouch();
 
       // GRAVITY AND FRICTIONS
       this.dy += this.gravity;
-      if (this.isIdle || this.isCrouching) {
-        var friction = this.isOnFloor ? 0.3 : 0.07;
-        if (this.isCrouching && Math.abs(this.dx) > this.maxSpeed) friction = 0.01;
-        this.dx = this.game.utils.lerp(this.dx, 0, friction);
+      if (this.isIdle || crouching && Math.abs(dx) > maxSpeed) {
+        var friction = onFloor ? 0.3 : 0.07;
+        if (crouching && Math.abs(dx) > maxSpeed) friction = onFloor ? 0.03 : 0;
+        this.dx = this.game.utils.lerp(dx, 0, friction);
       }
 
       if (this.game.window.play.startTime === 0) {
@@ -2115,6 +2184,9 @@ module.exports = function (_Block) {
           return e;
         })) this.game.window.play.startTimer();
       }
+
+      this.dx = this.dx;
+      this.dy = this.dy;
     }
   }, {
     key: 'resolve',
@@ -2170,8 +2242,8 @@ module.exports = function (_Block) {
         this.dy = 0;
       }
 
-      this.x += this.dx;
-      this.y += this.dy;
+      this.x += Math.round(this.dx);
+      this.y += Math.round(this.dy);
 
       this.camX = this.x;
       this.camY = this.y;
@@ -2323,12 +2395,30 @@ module.exports = function (_Block) {
     _this.color = 'brown';
     _this.empty = true;
     _this.collision = false;
+
+    _this.id = 4;
+    _this.purpose = ['Special'];
     return _this;
   }
 
   _createClass(Spawn, [{
-    key: 'update',
-    value: function update() {
+    key: 'draw',
+    value: function draw() {
+      if (this.game.mode === 'edit') {
+        var c = this.game.c,
+            scale = this.game.cfg.scale,
+            x = this.x * scale,
+            y = this.y * scale + (scale - this.h);
+
+        c.beginPath();
+        c.fillStyle = this.color;
+        c.fillRect(x, y, this.w, this.h);
+        c.closePath();
+      }
+    }
+  }, {
+    key: 'editUpdate',
+    value: function editUpdate() {
       this.w = this.game.cfg.scale;
       this.h = this.game.cfg.scale * 2;
     }
@@ -2382,6 +2472,9 @@ module.exports = function (_Block) {
     _this.color = 'gray';
     _this.empty = false;
     _this.collision = true;
+
+    _this.id = 3;
+    _this.purpose = ['Static'];
     return _this;
   }
 
@@ -2419,6 +2512,236 @@ module.exports = function (_Block) {
   }]);
 
   return Spikes;
+}(_block2.default);
+
+/***/ }),
+
+/***/ "./src/objects/sword.js":
+/*!******************************!*\
+  !*** ./src/objects/sword.js ***!
+  \******************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _block = __webpack_require__(/*! ./block */ "./src/objects/block.js");
+
+var _block2 = _interopRequireDefault(_block);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } //import autotile from '../tilesManager';
+
+
+module.exports = function (_Block) {
+  _inherits(Sword, _Block);
+
+  function Sword(x, y, Game) {
+    _classCallCheck(this, Sword);
+
+    var _this = _possibleConstructorReturn(this, (Sword.__proto__ || Object.getPrototypeOf(Sword)).call(this, x, y, Game));
+
+    var scale = Game.cfg.scale;
+
+    _this.w = scale / 2;
+    _this.h = scale / 2;
+
+    _this.inX = _this.w / 2;
+    _this.inY = _this.h / 2;
+
+    _this.type = 'Sword';
+    _this.color = 'yellow';
+    _this.empty = false;
+    _this.collision = true;
+
+    _this.dx = 3;
+
+    _this.id = 7;
+    _this.purpose = ['Moving'];
+
+    _this.link = 'SwordSupport';
+    return _this;
+  }
+
+  _createClass(Sword, [{
+    key: 'getLeft',
+    value: function getLeft(displayDelta) {
+      return this.x * this.game.cfg.scale + this.inX + (displayDelta ? this.dx : 0);
+    }
+  }, {
+    key: 'getTop',
+    value: function getTop(displayDelta) {
+      return this.y * this.game.cfg.scale + this.inY + (displayDelta ? this.dx : 0);
+    }
+  }, {
+    key: 'update',
+    value: function update() {
+      var game = this.game,
+          c = game.c,
+          scale = game.cfg.scale,
+          gridX = Math.floor(this.getLeft() / scale | 0),
+          gridY = Math.floor(this.getTop() / scale | 0),
+          movingLeft = this.dx > 0 ? false : true,
+          inX = this.inX,
+          inY = this.inY,
+          dx = this.dx;
+
+      this.w = game.cfg.scale / 2;
+      this.h = game.cfg.scale / 2;
+
+      this.inX += this.dx;
+
+      if (movingLeft && inX < 0) {
+        this.x--;
+        this.inX = scale - inX;
+      }
+
+      if (!movingLeft && inX > scale) {
+        this.x++;
+        this.inX = inX - scale;
+      }
+    }
+  }, {
+    key: 'editUpdate',
+    value: function editUpdate() {
+      var game = this.game,
+          cfg = game.cfg,
+          scale = cfg.scale,
+          oldScale = cfg.oldScale;
+
+      this.inX = this.inX / oldScale * scale;
+      this.inY = this.inY / oldScale * scale;
+
+      this.w = scale / 2;
+      this.h = scale / 2;
+    }
+  }, {
+    key: 'draw',
+    value: function draw() {
+      var game = this.game,
+          c = game.c;
+
+      c.beginPath();
+      c.fillStyle = this.color;
+      c.fillRect(this.getLeft(), this.getTop(), this.w, this.h);
+      c.closePath();
+    }
+
+    // collisionTop(obj, player, newDelta, oldDelta) {
+    //   player.die()
+    // }
+
+  }, {
+    key: 'resolve',
+    value: function resolve(obj, side) {
+
+      var game = this.game,
+          dir = this.dx > 0 ? 1 : -1,
+          map = game.static,
+          scale = game.cfg.scale,
+          gridX = Math.floor(this.getHalfWidth() / scale | 0),
+          gridY = Math.floor(this.getHalfHeight() / scale | 0);
+
+      switch (obj.type) {
+        case 'SwordSupport':
+          if (map[gridY][gridX + dir] && map[gridY][gridX + dir].type === 'SwordSupport') return;else {
+            if (this.getLeft(true) <= obj.getLeft() || this.getRight(true) >= obj.getRight()) this.dx = -this.dx;
+          }
+          break;
+
+        case 'Sword':
+          this.dx = -this.dx;
+          break;
+
+        case 'Player':
+          obj.die();
+          break;
+      }
+    }
+  }]);
+
+  return Sword;
+}(_block2.default);
+
+function isColliding(box, p, x, y) {
+  var l1 = box.getLeft(),
+      r1 = box.getRight(),
+      t1 = box.getTop(),
+      b1 = box.getBottom(),
+      l2 = p.getLeft(x),
+      r2 = p.getRight(x),
+      t2 = p.getTop(y),
+      b2 = p.getBottom(y);
+
+  if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
+    return true;
+  }
+  return false;
+}
+
+/***/ }),
+
+/***/ "./src/objects/swordSupport.js":
+/*!*************************************!*\
+  !*** ./src/objects/swordSupport.js ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _block = __webpack_require__(/*! ./block */ "./src/objects/block.js");
+
+var _block2 = _interopRequireDefault(_block);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } //import autotile from '../tilesManager';
+
+
+module.exports = function (_Block) {
+  _inherits(SwordSupport, _Block);
+
+  function SwordSupport(x, y, Game) {
+    _classCallCheck(this, SwordSupport);
+
+    var _this = _possibleConstructorReturn(this, (SwordSupport.__proto__ || Object.getPrototypeOf(SwordSupport)).call(this, x, y, Game));
+
+    _this.type = 'SwordSupport';
+    _this.color = 'gray';
+    _this.empty = false;
+    _this.collision = true;
+
+    _this.id = 6;
+    _this.purpose = ['Static'];
+    return _this;
+  }
+
+  // draw() {
+
+  // }
+
+  _createClass(SwordSupport, [{
+    key: 'resolve',
+    value: function resolve(player, side) {}
+  }]);
+
+  return SwordSupport;
 }(_block2.default);
 
 /***/ }),
@@ -2466,6 +2789,9 @@ module.exports = function (_Block) {
     _this.empty = false;
     _this.collision = true;
 
+    _this.id = 1;
+    _this.purpose = ['Static'];
+
     // autotile.getValue(this.game, this.x, this.y, false, false)
     return _this;
   }
@@ -2476,7 +2802,7 @@ module.exports = function (_Block) {
       var game = this.game;
       var c = game.c;
 
-      c.beginPath();
+      // c.beginPath()
       c.drawImage(game.assets.tiles[this.tile.name].img, // IMG
       this.tile.x, // CANVAS_X
       this.tile.y, // CANVAS_Y
@@ -2487,11 +2813,11 @@ module.exports = function (_Block) {
       game.cfg.scale + 1, // IMG_WIDTH
       game.cfg.scale + 1 // IMG_HEIGHT
       );
-      c.closePath();
+      // c.closePath()
     }
   }, {
-    key: 'update',
-    value: function update() {
+    key: 'editUpdate',
+    value: function editUpdate() {
       var game = this.game;
       this.w = game.cfg.scale;
       this.h = game.cfg.scale;
@@ -2507,6 +2833,11 @@ module.exports = function (_Block) {
         this.tile.x = x * game.assets.tiles[this.tile.name].size + x * game.assets.tiles[this.tile.name].iX;
         this.tile.y = y * game.assets.tiles[this.tile.name].size + y * game.assets.tiles[this.tile.name].iY;
       }
+    }
+  }, {
+    key: 'update',
+    value: function update() {
+      this.editUpdate();
     }
 
     // collisionTop(obj) {
@@ -2603,6 +2934,8 @@ function getTileValue(game, x, y) {
   var del = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
   var child = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
 
+  var map = game.static,
+      theMap = game.map;
 
   var tileValue = 0;
   var updateArr = [];
@@ -2620,23 +2953,34 @@ function getTileValue(game, x, y) {
   var NSWE = [false, false, false, false];
 
   function checkObj(a, b, v, id) {
-    if (game.map[b] && game.map[b][a] && game.map[b][a].type != 'Wall') return;
-    if (game.map[b] && game.map[b][a] === 0) return;
+    var test = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
 
-    // console.log(game.map[y][b])
-    if (game.map[b] && game.map[b][a] && game.map[b][a].empty) return;
+    if ((!map[b] || map[b] && !map[b][a]) && theMap[b] && theMap[b][a] && theMap[b][a][1] != '1') return;
+
+    if (map[b] && map[b][a] && map[b][a].type != 'Wall') return;
+
+    // console.log(map[b][a])
+    // if(b===5 && a === 11) {
+    //   if(map[b]) {
+    //     console.log(map[b][a])
+    //     console.log(map)
+    //   }
+    // }
+
+    // console.log(map[y][b])
+    if (map[b] && map[b][a] && map[b][a].empty) return;
 
     tileValue += v;
     if (id >= 0) NSWE[id] = true;
     if (child) return;
-    if (!game.map[b] || game.map[b] && !game.map[b][a]) return;
+    if (!map[b] || !map[b][a]) return;
 
     getTileValue(game, a, b, false, true);
-    game.cfg.updateArr.push({ x: a, y: b });
+    updateArr.push({ x: a, y: b });
   }
 
   checkObj(x, y - 1, N, 0); // N
-  checkObj(x, y + 1, S, 1); // S
+  checkObj(x, y + 1, S, 1, true); // S
   checkObj(x - 1, y, W, 2); // W // 24 + 64
   checkObj(x + 1, y, E, 3); // E
 
@@ -2647,13 +2991,11 @@ function getTileValue(game, x, y) {
 
 
   if (!del) {
-    // console.log(x, y, game.map[y][x])
-    game.map[y][x].tile.value = tileValue;
-  } else {
-    game.map[y][x].tile = null;
+    // console.log(x, y, map[y][x])
+    map[y][x].tile.value = tileValue;
   }
 
-  game.map[y][x].update(game);
+  map[y][x].editUpdate();
   return updateArr;
 }
 
@@ -2709,26 +3051,45 @@ var Edit = function () {
       c.save();
       c.translate(tX, tY);
 
+      var layerName = ['background', 'static', 'moving', 'foreground'];
       if (uptAll) {
         var canvasCols = Math.ceil(canvas.width / scale);
         var canvasRows = Math.ceil(canvas.height / scale);
         var xStart = Math.floor(tX / scale * -1) > 0 ? Math.floor(tX / scale * -1) : 0;
         var yStart = Math.floor(tY / scale * -1) > 0 ? Math.floor(tY / scale * -1) : 0;
 
-        for (var y = yStart; y < canvasRows + yStart + 1; y++) {
+        var _loop = function _loop(y) {
+          var _loop2 = function _loop2(x) {
+            layerName.forEach(function (name) {
+              var layer = game[name];
+
+              if (!layer[y]) return;
+              if (!layer[y][x]) return;
+              var cell = layer[y][x];
+              cell.editUpdate();
+              cell.draw();
+            });
+          };
+
           for (var x = xStart; x < canvasCols + xStart + 1; x++) {
-            if (!game.map[y]) continue;
-            if (!game.map[y][x]) continue;
-            var cell = game.map[y][x];
-            cell.update();
-            cell.draw();
+            _loop2(x);
           }
+        };
+
+        for (var y = yStart; y < canvasRows + yStart + 1; y++) {
+          _loop(y);
         }
         game.cfg.updateAll = false;
       } else if (uptArr.length > 0) {
-        for (var i = 0; i < uptArr.length; i++) {
-          game.map[uptArr[i].y][uptArr[i].x].draw(game);
-        }
+        uptArr.forEach(function (arr) {
+          layerName.forEach(function (name) {
+            var layer = game[name];
+            if (!layer[arr.y] || !layer[arr.y][arr.x]) return;
+            var cell = layer[arr.y][arr.x];
+            cell.editUpdate();
+            cell.draw();
+          });
+        });
 
         game.cfg.updateArr = [];
       }
@@ -2845,6 +3206,7 @@ var Edit = function () {
       if (8 <= scale + zoomTo && scale + zoomTo <= 96) {
         game.translate.x = mouse.x - (mouse.x - tx) / scale * (scale + zoomTo);
         game.translate.y = mouse.y - (mouse.y - ty) / scale * (scale + zoomTo);
+        game.cfg.oldScale = game.cfg.scale;
         game.cfg.scale += zoomTo;
         game.cfg.updateAll = true;
       }
@@ -2918,12 +3280,17 @@ Edit.prototype.checkForClicks = function () {
   var game = this.game,
       gridX = game.mouse.gridX,
       gridY = game.mouse.gridY,
-      map = game.map,
       mouse = game.mouse,
       cfg = game.cfg,
       select = document.getElementById('selectBlock');
 
-  if (!map[gridY] || map[gridY] && !map[gridY][gridX]) return;
+  var layerName = ['background', 'static', 'moving', 'foreground', 'special'];
+  var updtID = layerName.indexOf(game.select.layer);
+  if (updtID === 4) updtID = 1;
+
+  var map = game[layerName[updtID]];
+
+  if (!map[gridY] || !map[gridY][gridX] && map[gridY][gridX] != 0) return;
 
   var cell = map[gridY][gridX],
       mouseX = mouse.x,
@@ -2933,45 +3300,60 @@ Edit.prototype.checkForClicks = function () {
   mouse.last.gridY = gridY;
 
   var DrawPixel = function DrawPixel() {
-    if (game.select.block.name === 'Wall') {
+    if (!game.select.block) return;
+
+    if (game.select.block[3]) {
+      var linkAproved = false;
+
+      layerName = ['background', 'static', 'moving', 'foreground'];
+      layerName.forEach(function (name) {
+        var layer = game[name],
+            theCell = layer[gridY][gridX];
+
+        if (game.select.block[3] === theCell.type) linkAproved = true;
+      });
+
+      if (!linkAproved) return game.utils.handleError(game.select.block[1], 'link');
+    }
+
+    if (game.select.block[1] === 1) {
       var _cfg$updateArr;
 
-      map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+      map[gridY][gridX] = new game.select.block[0](gridX, gridY, game);
 
       (_cfg$updateArr = cfg.updateArr).push.apply(_cfg$updateArr, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, false, false)));
       cfg.updateArr.push({ x: gridX, y: gridY });
-    } else if (game.select.block.name === 'Spawn' || game.select.block.name === 'End') {
+    } else if (game.select.block[1] === 4 || game.select.block[1] === 5) {
+
       if (map[gridY - 1][gridX].type === 'Wall') {
         var _cfg$updateArr2;
 
-        map[gridY - 1][gridX] = new game.Objects.Block(gridX, gridY - 1, game);
+        map[gridY - 1][gridX] = new game.Objects.Block[0](gridX, gridY - 1, game);
         (_cfg$updateArr2 = cfg.updateArr).push.apply(_cfg$updateArr2, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY - 1, true, false)));
       } else {
-        map[gridY - 1][gridX] = new game.Objects.Block(gridX, gridY - 1, game);
+        map[gridY - 1][gridX] = new game.Objects.Block[0](gridX, gridY - 1, game);
       }
 
       if (map[gridY][gridX].type === 'Wall') {
         var _cfg$updateArr3;
 
-        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+        map[gridY][gridX] = new game.select.block[0](gridX, gridY, game);
         (_cfg$updateArr3 = cfg.updateArr).push.apply(_cfg$updateArr3, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, true, false)));
       } else {
-        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+        map[gridY][gridX] = new game.select.block[0](gridX, gridY, game);
       }
 
+      if (game.select.block[1] === 4) game.Player.respawn = [gridX, gridY - 1];
       cfg.updateArr.push({ x: gridX, y: gridY - 1 }, { x: gridX, y: gridY });
-      var optionId = game.select.block.name === 'Spawn' ? 3 : 4;
-      select.options[optionId].disabled = true;
-      select.value = 'Wall';
-      game.select.block = game.Objects.Wall;
+      document.dispatchEvent(refreshBlockType);
     } else {
       if (map[gridY][gridX].type === 'Wall') {
         var _cfg$updateArr4;
 
-        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+        map[gridY][gridX] = new game.select.block[0](gridX, gridY, game);
         (_cfg$updateArr4 = cfg.updateArr).push.apply(_cfg$updateArr4, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, true, false)));
       } else {
-        map[gridY][gridX] = new game.select.block(gridX, gridY, game);
+        map[gridY][gridX] = new game.select.block[0](gridX, gridY, game);
       }
       cfg.updateArr.push({ x: gridX, y: gridY });
     }
@@ -2982,15 +3364,11 @@ Edit.prototype.checkForClicks = function () {
 
     mouse.last.click = 'right';
 
-    if (cell.type === 'Spawn' || cell.type === 'End') {
-      var optionId = cell.type === 'Spawn' ? 3 : 4;
-      select.options[optionId].disabled = false;
-    }
-
-    map[gridY][gridX] = new this.game.Objects.Block(cell.x, cell.y, game);
+    map[gridY][gridX] = new this.game.Objects.Block[0](cell.x, cell.y, game);
 
     (_cfg$updateArr5 = cfg.updateArr).push.apply(_cfg$updateArr5, _toConsumableArray(_tilesManager2.default.getValue(game, gridX, gridY, true, false)));
     cfg.updateArr.push({ x: gridX, y: gridY });
+    document.dispatchEvent(refreshBlockType);
   }
 
   if (mouse.left) {
@@ -3041,9 +3419,12 @@ module.exports = function () {
 
   _createClass(Play, [{
     key: "update",
-    value: function update() {
+    value: function update(dt) {
+      // console.time('check')
       var game = this.game;
       if (!game.playing[1]) return;
+
+      this.dt = dt;
 
       var cfg = game.cfg,
           scale = cfg.scale,
@@ -3052,31 +3433,41 @@ module.exports = function () {
           tY = game.translate.y,
           Player = game.Player,
           Engine = game.Engine,
-          map = game.map;
+          map = game.map,
+          colMax = map[0].length,
+          rowMax = map.length,
+          cWidth = canvas.width,
+          cHeight = canvas.height;
 
       Engine.create(cfg.rows, cfg.cols, scale);
 
       if (!Player.isDead && !Player.hide) {
-        Player.move();
+        Player.move(dt);
         Engine.insert(Player);
       }
 
-      var canvasCols = Math.ceil(canvas.width / scale);
-      var canvasRows = Math.ceil(canvas.height / scale);
-      var xStart = Math.floor(tX / scale * -1) > 0 ? Math.floor(tX / scale * -1) : 0;
-      var yStart = Math.floor(tY / scale * -1) > 0 ? Math.floor(tY / scale * -1) : 0;
+      var offMap = 10,
+          colStart = Math.floor(tX / scale * -1) - offMap > 0 ? Math.floor(tX / scale * -1) - offMap : 0,
+          rowStart = Math.floor(tY / scale * -1) - offMap > 0 ? Math.floor(tY / scale * -1) - offMap : 0,
+          colEnd = Math.ceil(cWidth / scale) + colStart + offMap * 2 > colMax ? colMax : Math.ceil(cWidth / scale) + colStart + offMap * 2,
+          rowEnd = Math.ceil(cHeight / scale) + rowStart + offMap * 2 > rowStart ? rowMax : Math.ceil(cHeight / scale) + rowStart + offMap * 2;
 
-      for (var y = yStart; y < canvasRows + yStart + 1; y++) {
-        for (var x = xStart; x < canvasCols + xStart + 1; x++) {
-          if (!map[y] || map[y] && !map[y][x]) continue;
+      var layerName = ['static', 'moving'];
+      layerName.map(function (name) {
+        var layer = game[name];
 
-          var cell = map[y][x];
-          if (cell.empty) continue;
+        for (var y = rowStart; y < rowEnd; y++) {
+          for (var x = colStart; x < colEnd; x++) {
+            if (!layer[y] || !layer[y][x]) continue;
 
-          cell.update();
-          if (cell.collision) Engine.insert(cell);
+            var cell = layer[y][x];
+            if (cell.empty || !cell.collision) continue;
+
+            cell.update();
+            Engine.insert(cell);
+          }
         }
-      }
+      });
 
       // Test block
       // this.Block = new game.Objects.Wall(10.628, 6, game)
@@ -3088,6 +3479,7 @@ module.exports = function () {
       Player.update();
 
       this.timer = Date.now() - this.startTime;
+      // console.timeEnd('check')
     }
   }, {
     key: "draw",
@@ -3102,7 +3494,11 @@ module.exports = function () {
           tY = game.translate.y,
           Player = game.Player,
           map = game.map,
-          c = game.c;
+          c = game.c,
+          colMax = map[0].length,
+          rowMax = map.length,
+          cWidth = canvas.width,
+          cHeight = canvas.height;
       c.clearRect(0, 0, canvas.width, canvas.height);
 
       game.Camera.update();
@@ -3110,23 +3506,30 @@ module.exports = function () {
       c.save();
       c.translate(tX, tY);
 
-      Player.draw();
+      var offMap = 10,
+          colStart = Math.floor(tX / scale * -1) - offMap > 0 ? Math.floor(tX / scale * -1) - offMap : 0,
+          rowStart = Math.floor(tY / scale * -1) - offMap > 0 ? Math.floor(tY / scale * -1) - offMap : 0,
+          colEnd = Math.ceil(cWidth / scale) + colStart + offMap * 2 > colMax ? colMax : Math.ceil(cWidth / scale) + colStart + offMap * 2,
+          rowEnd = Math.ceil(cHeight / scale) + rowStart + offMap * 2 > rowStart ? rowMax : Math.ceil(cHeight / scale) + rowStart + offMap * 2;
 
-      var canvasCols = Math.ceil(canvas.width / scale);
-      var canvasRows = Math.ceil(canvas.height / scale);
-      var xStart = Math.floor(tX / scale * -1) > 0 ? Math.floor(tX / scale * -1) : 0;
-      var yStart = Math.floor(tY / scale * -1) > 0 ? Math.floor(tY / scale * -1) : 0;
+      var layerName = ['background', 'static', 'moving', 'foreground'];
+      layerName.map(function (name) {
+        var layer = game[name];
 
-      for (var y = yStart; y < canvasRows + yStart + 1; y++) {
-        for (var x = xStart; x < canvasCols + xStart + 1; x++) {
-          if (!map[y] || map[y] && !map[y][x]) continue;
+        if (name === 'moving') Player.draw();
 
-          var cell = map[y][x];
-          if (cell.empty) continue;
+        for (var y = rowStart; y < rowEnd; y++) {
+          for (var x = colStart; x < colEnd; x++) {
+            if (!layer[y] || layer[y] && !layer[y][x]) continue;
 
-          cell.draw();
+            var cell = layer[y][x];
+            if (cell.empty) continue;
+
+            if (!cell.collision) cell.update();
+            cell.draw();
+          }
         }
-      }
+      });
 
       // Test block
       // this.Block.draw()
@@ -3244,9 +3647,8 @@ module.exports = function () {
       var game = this.game;
       e.preventDefault();
       if (!game.playing[0]) return;
-      if (game.Player.keys.hasOwnProperty(e.key)) game.Player.keys[e.key] = true;
-
-      if (e.key === 'Escape') {
+      if (game.Player.keys.hasOwnProperty(e.code)) game.Player.keys[e.code] = true;
+      if (e.code === 'Escape') {
         var div = document.getElementById('playMenu');
 
         game.window.play.pauseTimer();
@@ -3267,8 +3669,8 @@ module.exports = function () {
       e.preventDefault();
       if (!game.playing[0]) return;
 
-      if (!game.Player.keys.hasOwnProperty(e.key)) return;
-      game.Player.keys[e.key] = false;
+      if (!game.Player.keys.hasOwnProperty(e.code)) return;
+      game.Player.keys[e.code] = false;
     }
   }, {
     key: "onmousedown",
@@ -3405,10 +3807,17 @@ module.exports = function Utils(game) {
   };
 
   this.catchBlockCollision = function (x, y) {
-    if (!_this.game.map[y]) return false;
-    if (!_this.game.map[y][x]) return false;
-    if (!_this.game.map[y][x].collision) return false;
-    return _this.game.map[y][x];
+    var layerName = ['static', 'moving'];
+
+    var toReturn = false;
+
+    layerName.forEach(function (name) {
+      var layer = _this.game[name];
+      if (!layer[y] || !layer[y][x] || !layer[y][x].collision) return false;
+      toReturn = layer[y][x];
+    });
+
+    return toReturn;
   };
 
   this.numberToClass = function (num) {
@@ -3464,6 +3873,10 @@ module.exports = function Utils(game) {
     var sec = '' + (Math.floor(nb / 1000 % 60) < 10 ? '0' : '') + Math.floor(nb / 1000 % 60);
     var min = '' + (Math.floor(nb / 1000 / 60) < 10 ? '0' : '') + Math.floor(nb / 1000 / 60);
     return min + ':' + sec + ':' + ms;
+  };
+
+  this.handleError = function () {
+    return;
   };
 };
 
