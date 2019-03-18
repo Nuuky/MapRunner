@@ -2173,7 +2173,7 @@ module.exports = function (_Block) {
       if (up) {
         this.jump();
       } else {
-        if (onFloor) this.canJump = true;
+        this.canJump = true;
       }
 
       if (!crouching && down) this.crouch();
@@ -3676,6 +3676,15 @@ module.exports = function () {
         }
 
         game.canvas.focus();
+      }
+
+      if (e.code === 'KeyR') {
+        game.init();
+        game.playing[0] = true;
+        game.animate();
+        game.canvas.focus();
+        game.window.play.resetTimer();
+        game.Player.hide = false;
       }
     }
   }, {
