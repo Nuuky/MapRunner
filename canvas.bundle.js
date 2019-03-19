@@ -297,32 +297,34 @@ var framePerSeconds = setInterval(function () {
 }, 1000);
 
 // Animation Loop
-var lastRender = Date.now();
+var lastRender = void 0;
 Game.animate = function () {
-    now = Date.now();
+    now = performance.now();
     delta = now - then;
 
-    var dt = Date.now() - lastRender;
-
-    if (delta > interval) {
-        // console.log(delta)
-        // console.time('check')
+    var dt = now - (lastRender || performance.now());
+    // console.log(dt)
 
 
-        // Game.dt = delta / 20//delta * 10
-        if (Game.mode === 'play') {
-            Game.window.play.update(dt);
-            Game.window.play.draw();
-        } else if (Game.mode === 'edit') Game.window.edit.update();
+    // if (delta > interval) {
+    // console.log(delta)
+    // console.time('check')
 
-        then = now - delta % interval;
-        displayInfo();
 
-        //Game.message.error('Test')
+    // Game.dt = delta / 20//delta * 10
+    if (Game.mode === 'play') {
+        Game.window.play.update(dt);
+        Game.window.play.draw();
+    } else if (Game.mode === 'edit') Game.window.edit.update();
 
-        // console.timeEnd('check')
-    }
-    lastRender = Date.now();
+    then = now - delta % interval;
+    displayInfo();
+
+    //Game.message.error('Test')
+
+    // console.timeEnd('check')
+    // }
+    lastRender = performance.now();
 
     if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
 };
@@ -331,7 +333,7 @@ Game.animate = function () {
 var btn = new __webpack_require__(/*! ./button */ "./src/button.js");
 var btns = [];
 
-var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Story', 'test1', function () {
+var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Play', 'test1', function () {
     Game.mode = 'play';
     Game.init();
     Game.playing = [true, true];
@@ -346,7 +348,7 @@ var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Stor
     });
 });
 
-var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, 'Map Maker', 'test2', function () {
+var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, 'Custom', 'test2', function () {
     Game.mode = 'edit';
     Game.init();
     setTimeout(function () {
@@ -948,6 +950,7 @@ module.exports = function (game) {
   h2.id = 'playH2';
   div.appendChild(h2);
 
+  var layerName = ['background', 'static', 'moving', 'foreground'];
   // INPUT ROW
   var rowSpan = document.createElement('span');
   rowSpan.innerHTML = 'Row: ';
@@ -959,16 +962,21 @@ module.exports = function (game) {
     var newRows = e.target.value,
         map = [];
 
-    for (var j = 0; j < newRows; j++) {
-      if (game.map[j]) map[j] = game.map[j];else {
-        map[j] = [];
-        for (var _i = 0; _i < game.cfg.cols; _i++) {
-          map[j][_i] = new game.Objects.Block(_i, j, game);
+    layerName.forEach(function (name) {
+      var layer = game[name];
+
+      for (var j = 0; j < newRows; j++) {
+        if (layer[j]) map[j] = layer[j];else {
+          map[j] = [];
+          for (var _i = 0; _i < game.cfg.cols; _i++) {
+            if (name === 'background') map[j][_i] = new game.Objects.Block[0](_i, j, game);else map[j][_i] = 0;
+          }
         }
       }
-    }
 
-    game.map = map;
+      game[name] = map;
+    });
+
     game.cfg.rows = Number(newRows);
     game.cfg.updateAll = true;
   };
@@ -983,19 +991,25 @@ module.exports = function (game) {
   inputCols.type = 'number';
   inputCols.value = game.cfg.cols;
   inputCols.onchange = function (e) {
-    var newCols = e.target.value,
-        map = [];
+    var newCols = e.target.value;
 
-    for (var j = 0; j < game.cfg.rows; j++) {
-      map[j] = [];
-      for (var _i2 = 0; _i2 < newCols; _i2++) {
-        if (game.map[j][_i2]) map[j][_i2] = game.map[j][_i2];else {
-          map[j][_i2] = new game.Objects.Block(_i2, j, game);
+    layerName.forEach(function (name) {
+      var layer = game[name];
+
+      var map = [];
+
+      for (var j = 0; j < game.cfg.rows; j++) {
+        map[j] = [];
+        for (var _i2 = 0; _i2 < newCols; _i2++) {
+          if (layer[j][_i2]) map[j][_i2] = layer[j][_i2];else {
+            if (name === 'background') map[j][_i2] = new game.Objects.Block[0](_i2, j, game);else map[j][_i2] = 0;
+          }
         }
       }
-    }
 
-    game.map = map;
+      game[name] = map;
+    });
+
     game.cfg.cols = Number(newCols);
     game.cfg.updateAll = true;
   };
@@ -1003,14 +1017,14 @@ module.exports = function (game) {
   div.appendChild(colSpan);
 
   // SELECT LAYER
-  var layerName = ['special', 'foreground', 'moving', 'static', 'background'],
+  var layerType = ['background', 'static', 'moving', 'foreground', 'special'],
       layerBlock = document.createElement('select');
   layerBlock.id = 'layerBlock';
 
-  for (var i = 0; i < layerName.length; i++) {
+  for (var i = 0; i < layerType.length; i++) {
     var option = document.createElement("option");
-    option.value = layerName[i];
-    option.text = layerName[i];
+    option.value = layerType[i];
+    option.text = layerType[i];
     layerBlock.appendChild(option);
   }
 
@@ -1105,10 +1119,14 @@ module.exports = function (game) {
     game.mode = 'play';
 
     game.init(true);
-    game.playing = [true, true];
     game.cfg.updateAll = true;
     game.canvas.focus();
-    game.animate();
+    game.window.play.resetTimer();
+    game.Player.hide = false;
+    if (!game.playing[0]) {
+      game.playing[0] = true;
+      game.animate();
+    }
     game.window.play.start();
   };
   div.appendChild(btnPlay);
@@ -1123,8 +1141,7 @@ module.exports = function (game) {
 
     var str = '';
 
-    var layerName = ['background', 'static', 'moving', 'foreground'],
-        mapTest = game.static;
+    var mapTest = game.static;
 
     var _loop = function _loop(row) {
       var _loop2 = function _loop2(col) {
@@ -1258,6 +1275,9 @@ module.exports.load = function (Game) {
         });
 
         Game.map = map;
+        Game.cfg.cols = map[0].length;
+        Game.cfg.rows = map.length;
+        console.log(Game.cfg.cols, Game.cfg.rows);
         Game.firstInit = false;
     }
 
@@ -1322,6 +1342,8 @@ module.exports.save = function (Game) {
     });
 
     Game.map = map;
+    Game.cfg.cols = map[0].length;
+    Game.cfg.rows = map.length;
 };
 
 /***/ }),
@@ -1703,7 +1725,10 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } //import autotile from '../tilesManager';
 
 
-module.exports = function (_Block) {
+var MAGNITUDEX = 2;
+var MAGNITUDEY = 0.2;
+
+var BouncingBox = function (_Block) {
   _inherits(BouncingBox, _Block);
 
   function BouncingBox(x, y, Game) {
@@ -1750,7 +1775,7 @@ module.exports = function (_Block) {
     key: 'collisionLeft',
     value: function collisionLeft(obj, player, newDelta, oldDelta) {
       // console.log('BB-LEFT')
-      if (player.dx > 10) {
+      if (player.dx > MAGNITUDEX) {
         player.dx *= -obj.bounceFactor(player);
         player.hasBounced = true;
       } else obj.stopLeft(obj, player);
@@ -1759,7 +1784,7 @@ module.exports = function (_Block) {
     key: 'collisionTop',
     value: function collisionTop(obj, player, newDelta, oldDelta) {
       // console.log('BB-TOP')
-      if (player.dy > 10) {
+      if (player.dy > MAGNITUDEY) {
         player.dy *= -obj.bounceFactor(player);
         // player.y += player.dy
         player.isOnFloor = true;
@@ -1770,7 +1795,7 @@ module.exports = function (_Block) {
     key: 'collisionRight',
     value: function collisionRight(obj, player, newDelta, oldDelta) {
       // console.log('BB-RIGHT')
-      if (player.dx < -10) {
+      if (player.dx < -MAGNITUDEX) {
         player.dx *= -obj.bounceFactor(player);
         player.hasBounced = true;
       } else obj.stopRight(obj, player);
@@ -1779,7 +1804,7 @@ module.exports = function (_Block) {
     key: 'collisionBottom',
     value: function collisionBottom(obj, player, newDelta, oldDelta) {
       // console.log('BB-BOT')
-      if (player.dy < -10) {
+      if (player.dy < -MAGNITUDEY) {
         player.dy *= -obj.bounceFactor(player);
         player.hasBounced = true;
       } else obj.stopBottom(obj, player);
@@ -1795,6 +1820,8 @@ module.exports = function (_Block) {
 
   return BouncingBox;
 }(_block2.default);
+
+module.exports = BouncingBox;
 
 /***/ }),
 
@@ -1973,7 +2000,12 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-module.exports = function (_Block) {
+var GRAVITY = 0.0055;
+var JUMPFORCE = 1.3;
+var MAXSPEED = 0.8;
+var ACCEL = 0.2;
+
+var Player = function (_Block) {
   _inherits(Player, _Block);
 
   function Player(x, y, name, Game) {
@@ -1994,11 +2026,10 @@ module.exports = function (_Block) {
 
     _this.respawn = [_this.x, _this.y];
 
-    _this.accel = 1;
-    _this.maxSpeed = 12;
-    _this.jumpForce = 0;
-    _this.mass = 1;
-    _this.gravity = 0.98;
+    _this.accel = ACCEL;
+    _this.maxSpeed = MAXSPEED;
+    _this.gravity = GRAVITY;
+    _this.jumpForce = JUMPFORCE;
 
     _this.native = {
       w: _this.w,
@@ -2076,7 +2107,7 @@ module.exports = function (_Block) {
     key: 'jump',
     value: function jump() {
       if (!this.isOnFloor || !this.canJump) return;
-      this.dy = -17;
+      this.dy = -this.jumpForce;
       this.isOnFloor = false;
       this.canJump = false;
     }
@@ -2138,16 +2169,15 @@ module.exports = function (_Block) {
     }
   }, {
     key: 'move',
-    value: function move(d) {
-      var dt = d / 10;
+    value: function move(dt) {
       this.isIdle = true;
 
       var dx = this.dx,
           dy = this.dy,
           onFloor = this.isOnFloor,
           crouching = this.isCrouching,
-          maxSpeed = this.maxSpeed,
-          accel = this.accel,
+          maxSpeed = this.maxSpeed * dt,
+          accel = this.accel * dt,
           key = this.keys,
           left = key.ArrowLeft || key.KeyA ? true : false,
           up = key.ArrowUp || key.KeyW || key.Space ? true : false,
@@ -2170,6 +2200,10 @@ module.exports = function (_Block) {
         this.isIdle = false;
       }
 
+      if (left && right) {
+        this.dx = 0;
+      }
+
       if (up) {
         this.jump();
       } else {
@@ -2181,11 +2215,11 @@ module.exports = function (_Block) {
       if (crouching && !down) this.uncrouch();
 
       // GRAVITY AND FRICTIONS
-      this.dy += this.gravity;
+      this.dy += this.gravity * dt;
       if (this.isIdle || crouching && Math.abs(dx) > maxSpeed) {
-        var friction = onFloor ? 0.3 : 0.07;
-        if (crouching && Math.abs(dx) > maxSpeed) friction = onFloor ? 0.03 : 0;
-        this.dx = this.game.utils.lerp(dx, 0, friction);
+        var friction = onFloor ? 0.02 : 0.012;
+        if (crouching && Math.abs(dx) > maxSpeed) friction = onFloor ? 0.0013 : 0;
+        this.dx = this.game.utils.lerp(dx, 0, friction * dt);
       }
 
       if (this.game.window.play.startTime === 0) {
@@ -2194,9 +2228,6 @@ module.exports = function (_Block) {
           return e;
         })) this.game.window.play.startTimer();
       }
-
-      this.dx = this.dx;
-      this.dy = this.dy;
     }
   }, {
     key: 'resolve',
@@ -2205,7 +2236,7 @@ module.exports = function (_Block) {
     }
   }, {
     key: 'update',
-    value: function update() {
+    value: function update(dt) {
       // console.log(this.isDead)
       if (this.isDead || this.hide) return;
       // console.log('PlayerY =', this.dy)
@@ -2252,8 +2283,8 @@ module.exports = function (_Block) {
         this.dy = 0;
       }
 
-      this.x += Math.round(this.dx);
-      this.y += Math.round(this.dy);
+      this.x += this.dx;
+      this.y += this.dy * dt;
 
       this.camX = this.x;
       this.camY = this.y;
@@ -2364,6 +2395,8 @@ module.exports = function (_Block) {
 
   return Player;
 }(_block2.default);
+
+module.exports = Player;
 
 /***/ }),
 
@@ -2572,7 +2605,7 @@ module.exports = function (_Block) {
     _this.empty = false;
     _this.collision = true;
 
-    _this.dx = 3;
+    _this.dx = 0.3;
 
     _this.id = 7;
     _this.purpose = ['Moving'];
@@ -2593,7 +2626,7 @@ module.exports = function (_Block) {
     }
   }, {
     key: 'update',
-    value: function update() {
+    value: function update(dt) {
       var game = this.game,
           c = game.c,
           scale = game.cfg.scale,
@@ -2607,7 +2640,7 @@ module.exports = function (_Block) {
       this.w = game.cfg.scale / 2;
       this.h = game.cfg.scale / 2;
 
-      this.inX += this.dx;
+      this.inX += this.dx * dt;
 
       if (movingLeft && inX < 0) {
         this.x--;
@@ -2663,7 +2696,6 @@ module.exports = function (_Block) {
         case 'SwordSupport':
           if (map[this.y][this.x + dir] && map[this.y][this.x + dir].type === 'SwordSupport') return;else {
             if (movingLeft && this.getLeft() < obj.getLeft()) this.dx = -this.dx;else if (!movingLeft && this.getRight() > obj.getRight()) this.dx = -this.dx;
-            console.log(this.x);
           }
           break;
 
@@ -3479,7 +3511,7 @@ module.exports = function () {
             var cell = layer[y][x];
             if (cell.empty || !cell.collision) continue;
 
-            cell.update();
+            cell.update(dt);
             Engine.insert(cell);
           }
         }
@@ -3492,7 +3524,7 @@ module.exports = function () {
       // Engine.insert(this.Block)
 
       Engine.checkCells();
-      Player.update();
+      Player.update(dt);
 
       this.timer = Date.now() - this.startTime;
       // console.timeEnd('check')
@@ -3680,8 +3712,11 @@ module.exports = function () {
 
       if (e.code === 'KeyR') {
         game.init();
-        game.playing[0] = true;
-        game.animate();
+
+        if (!game.playing[0]) {
+          game.playing[0] = true;
+          game.animate();
+        }
         game.canvas.focus();
         game.window.play.resetTimer();
         game.Player.hide = false;
@@ -3782,9 +3817,9 @@ module.exports = function Utils(game) {
     if (value1 === 0) return false;
     amount = amount < 0 ? 0 : amount;
     amount = amount > 1 ? 1 : amount;
-    var result = Number((value1 + (value2 - value1) * amount).toFixed(2));
+    var result = Number((value1 + (value2 - value1) * amount).toFixed(5));
     var diff = Math.abs(result - value2);
-    return diff.toFixed(0) == 0 ? value2 : result;
+    return diff.toFixed(2) == 0 ? value2 : result;
   };
 
   this.getBlock = function (arr, x, y) {
