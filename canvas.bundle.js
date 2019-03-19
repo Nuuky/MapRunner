@@ -283,13 +283,9 @@ Game.init = function () {
 
 // Display FPS / ZOOM
 var fps = 60,
-    now = void 0,
-    then = Date.now(),
-    delta = void 0,
     fpsCount = 0,
     dispFps = 0;
-var interval = 1000 / fps,
-    first = then;
+var interval = 1000 / fps;
 var displayInfo = function displayInfo() {
     fpsCount++;
 
@@ -312,32 +308,22 @@ var framePerSeconds = setInterval(function () {
 
 // Animation Loop
 var lastRender = void 0;
+
 Game.animate = function () {
-    now = performance.now();
-    delta = now - then;
 
-    var dt = now - (lastRender || performance.now());
-    // console.log(dt)
-
-
-    // if (delta > interval) {
-    // console.log(delta)
+    var now = performance.now();
+    var delta = now - (lastRender || performance.now());
     // console.time('check')
 
 
-    // Game.dt = delta / 20//delta * 10
     if (Game.mode === 'play') {
-        Game.window.play.update(dt);
+        Game.window.play.update(delta);
         Game.window.play.draw();
     } else if (Game.mode === 'edit') Game.window.edit.update();
 
-    then = now - delta % interval;
     displayInfo();
 
-    //Game.message.error('Test')
-
     // console.timeEnd('check')
-    // }
     lastRender = performance.now();
 
     if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
