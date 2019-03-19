@@ -4,37 +4,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Document</title>
-  <link rel="stylesheet" type="text/css" href="style.css">
+  <style>
+      body {
+          margin: 0;
+          box-sizing: border-box;
+          color: white;
+          font-family: Arial;
+      }
+
+      #canvas {
+        background: #111115;
+      }
+
+      #canvas:focus {
+        outline: none;
+      }
+
+      #game {
+        position: relative;
+        width: max-content;
+        height: max-content;
+      }
+
+      ul {
+        list-style: none;
+      }
+
+      .block {
+        display: block;
+      }
+  </style>
 </head>
 <body>
   <div id="game">
-      <canvas id="canvas" tabindex="1"></canvas>
-
-      <!-- <div id="toolbar">
-        <form action=""><h2>Settings:</h2>
-          <label>rows:</label><input name="rows" type="number"><br>
-          <label>cols:</label><input name="cols" type="number"><br>
-
-          <span>BlockType:</span> <select name="blocks" id="select-block">
-
-            <option value=""></option>
-            <option value="Wall">Wall</option>
-            <option value="BouncingBox">BouncingBox</option>
-            <option value="Spike">Spike</option>
-          </select><br>
-
-          <span>Tile:</span> <select name="tiles" id="select-tile">
-            <option value=""></option>
-            <option value="landscape">Landscape</option>
-          </select><br>
-
-          <input type="button" value="Reload">
-          <input type="button" value="Save">
-          <input type="button" value="Test">
-        </form>
-      </div> -->
+      <canvas id="canvas" "tabindex"=1></canvas>
   </div>
 
 
-<script type="text/javascript" src="./canvas.bundle.js"></script></body>
+</body>
 </html>

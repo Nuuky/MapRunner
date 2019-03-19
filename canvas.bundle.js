@@ -102,8 +102,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Button = function () {
   function Button(game, x, y, w, h, fontSize, str, eventName, callback) {
-    var _this = this;
-
     var autoDestroy = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : false;
 
     _classCallCheck(this, Button);
@@ -124,30 +122,48 @@ var Button = function () {
     this.cb = callback;
     this.autoDestroy = autoDestroy;
 
-    this.onOver = function (e) {
-      if (_this.game.utils.mouseCollision(_this, { x: e.clientX, y: e.clientY })) {
-        _this.backColor = 'brown';
-        _this.draw();
-      } else {
-        _this.backColor = 'black';
-        _this.draw();
-      }
-    };
+    this.game.canvas.addEventListener('mousemove', this.onOver.bind(this));
 
-    this.click = function (e) {
-      if (!_this.game.utils.mouseCollision(_this, { x: e.clientX, y: e.clientY })) return;
-      _this.cb();
-      if (autoDestroy) _this.destroy();
-    };
-
-    this.game.canvas.addEventListener('mousemove', this.onOver);
-
-    this.game.canvas.addEventListener('click', this.click);
+    this.game.canvas.addEventListener('click', this.onClick.bind(this));
 
     this.draw();
   }
 
   _createClass(Button, [{
+    key: 'onOver',
+    value: function onOver(e) {
+      if (this.mouseCollision({ x: e.clientX, y: e.clientY })) {
+        // canvas.style.cursor = 'pointer'
+        this.backColor = 'brown';
+        this.draw();
+      } else {
+        // canvas.style.cursor = 'default'
+        this.backColor = 'black';
+        this.draw();
+      }
+    }
+  }, {
+    key: 'onClick',
+    value: function onClick(e) {
+      if (!this.mouseCollision({ x: e.clientX, y: e.clientY })) return;
+      this.cb();
+      if (this.autoDestroy) this.destroy();
+    }
+  }, {
+    key: 'mouseCollision',
+    value: function mouseCollision(b) {
+      var a = this;
+      var aL = a.x,
+          aR = aL + a.w,
+          aT = a.y,
+          aB = aT + a.h,
+          bL = b.x,
+          bT = b.y;
+
+      if (aL <= bL && aR >= bL && aT <= bT && aB >= bT) return true;
+      return false;
+    }
+  }, {
     key: 'draw',
     value: function draw() {
       var game = this.game,
@@ -163,7 +179,11 @@ var Button = function () {
 
       c.beginPath();
       c.fillStyle = this.backColor;
-      c.fillRect(this.x, this.y, size[0] + this.offX, size[1] + this.offY);
+      c.strokeStyle = this.fontColor;
+      c.lineWidth = 3;
+      c.rect(this.x, this.y, size[0] + this.offX, size[1] + this.offY);
+      c.fill();
+      c.stroke();
       c.closePath();
 
       c.beginPath();
@@ -172,9 +192,19 @@ var Button = function () {
       c.closePath();
     }
   }, {
+    key: 'getLeft',
+    value: function getLeft() {
+      return this.halfX;
+    }
+  }, {
     key: 'getTop',
     value: function getTop() {
       return this.halfY;
+    }
+  }, {
+    key: 'getRight',
+    value: function getRight() {
+      return this.getLeft() + this.w;
     }
   }, {
     key: 'getBottom',
@@ -333,7 +363,7 @@ Game.animate = function () {
 var btn = new __webpack_require__(/*! ./button */ "./src/button.js");
 var btns = [];
 
-var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Play', 'test1', function () {
+var btn1 = new btn(Game, canvas.width / 2, canvas.height / 2 - 40, 250, 80, 20, 'PLAY', 'test1', function () {
     Game.mode = 'play';
     Game.init();
     Game.playing = [true, true];
@@ -348,7 +378,7 @@ var btn1 = new btn(Game, canvas.width / 2, canvas.height / 3, 250, 80, 30, 'Play
     });
 });
 
-var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, 'Custom', 'test2', function () {
+var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 20, 250, 80, 20, 'CUSTOM', 'test2', function () {
     Game.mode = 'edit';
     Game.init();
     setTimeout(function () {
@@ -365,8 +395,9 @@ var btn2 = new btn(Game, canvas.width / 2, btn1.getBottom() + 10, 250, 80, 30, '
     }, 200);
 });
 
-var btn3 = new btn(Game, canvas.width / 2, btn2.getBottom() + 10, 250, 80, 30, 'Quit', 'test3', function () {});
-btns = [btn1, btn2, btn3];
+// const btn3 = new btn(Game, canvas.width/2, btn2.getBottom()+10, 250, 80, 20, 'Quit', 'test3', () => {
+// })
+btns = [btn1, btn2];
 
 /***/ }),
 
@@ -1277,7 +1308,6 @@ module.exports.load = function (Game) {
         Game.map = map;
         Game.cfg.cols = map[0].length;
         Game.cfg.rows = map.length;
-        console.log(Game.cfg.cols, Game.cfg.rows);
         Game.firstInit = false;
     }
 
@@ -3852,18 +3882,6 @@ module.exports = function Utils(game) {
 
   this.textSize = function (c, txt) {
     return [c.measureText(txt).width, parseInt(c.font.match(/\d+/), 10) * 0.7];
-  };
-
-  this.mouseCollision = function (a, b) {
-    var aL = a.x,
-        aR = aL + a.w,
-        aT = a.y,
-        aB = aT + a.h,
-        bL = b.x,
-        bT = b.y;
-
-    if (aL <= bL && aR >= bL && aT <= bT && aB >= bT) return true;
-    return false;
   };
 
   this.catchBlockCollision = function (x, y) {
