@@ -307,12 +307,14 @@ var framePerSeconds = setInterval(function () {
 }, 1000);
 
 // Animation Loop
-var lastRender = void 0;
+Game.lastRender;
 
 Game.animate = function () {
+    Game.now = performance.now();
 
-    var now = performance.now();
-    var delta = now - (lastRender || performance.now());
+    if (Game.resetAnimate) Game.lastRender = performance.now();
+
+    var delta = Game.now - Game.lastRender;
     // console.time('check')
 
 
@@ -324,8 +326,9 @@ Game.animate = function () {
     displayInfo();
 
     // console.timeEnd('check')
-    lastRender = performance.now();
+    Game.lastRender = performance.now();
 
+    Game.resetAnimate = false;
     if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
 };
 
@@ -341,6 +344,7 @@ var btn1 = new btn(Game, canvas.width / 2, canvas.height / 2 - 40, 250, 80, 20, 
 
     // Game.window[Game.mode].end()
 
+    Game.resetAnimate = true;
     Game.animate();
     Game.window[Game.mode].start();
     btns.forEach(function (b) {
@@ -655,6 +659,10 @@ var Game = function Game(canvas) {
   this.moving = [];
   this.foreground = [];
 
+  this.lastRender = null;
+  this.now = null;
+  this.resetAnimate = true;
+
   this.Player = undefined;
 
   this.Objects = __webpack_require__(/*! ./objects */ "./src/objects.js");
@@ -829,19 +837,6 @@ module.exports = function (game) {
   // CONTAINER
   var div = document.createElement('div');
   div.id = 'playMenu';
-  // window.addEventListener('keydown', handleEscape.bind(div))
-  // function handleEscape(e) {
-  //   if(e.key === 'Escape') {
-  //     game.window.play.pauseTimer()
-  //     const width = this.style.width.replace(/[px%]/i, '')
-  //     if (width > 0) {
-  //       this.style.width = 0
-  //     } else {
-  //       this.style.width = '100%'
-  //     }
-  //   }
-  // }
-
 
   // BUTTON Resume
   var btnResume = document.createElement('input');
@@ -868,6 +863,7 @@ module.exports = function (game) {
     game.init();
     game.playing[0] = true;
     div.style.width = 0;
+    game.resetAnimate = true;
     game.animate();
     game.canvas.focus();
     game.window.play.resetTimer();
@@ -1126,6 +1122,7 @@ module.exports = function (game) {
     game.Player.hide = false;
     if (!game.playing[0]) {
       game.playing[0] = true;
+      game.resetAnimate = true;
       game.animate();
     }
     game.window.play.start();
@@ -1625,58 +1622,6 @@ module.exports = function () {
         obj.collision.left.push({ obj: this, callback: this.collisionLeft });
       }
     }
-
-    /*
-    newCollision(player) {
-      if(!player.type === 'Player') return
-    
-      const dx = player.dx,
-            dy = player.dy,
-              objLeft   = this.getLeft(),
-            objTop    = this.getTop(),
-            objRight  = this.getRight(),
-            objBottom = this.getBottom(),
-              playerLeft    = player.getLeft(),
-            playerTop     = player.getTop(),
-            playerRight   = player.getRight(),
-            playerBottom  = player.getBottom(),
-            playerW       = player.w,
-            playerH       = player.h;
-            
-            // collisionTopLeft = ()
-      
-      if (isColliding(this, player, false, true))
-      {
-        if (dy > 0)
-        {
-          player.y  = this.getTop() - player.h
-          player.dy = 0
-          player.isOnFloor = true
-        }
-        else if (dy < 0)
-        {
-          player.y  = this.getBottom()
-          player.dy = 0
-        }
-      }
-    
-      if (isColliding(this, player, true, false))
-      {
-        if (dx > 0)
-        {
-          player.x  = this.getLeft()
-          player.dx = 0
-        }
-        else if (dx < 0)
-        {
-          player.x  = this.getRight() - player.w
-          player.dx = 0
-        }
-      }
-      
-    }
-    */
-
   }]);
 
   return Block;
@@ -2176,8 +2121,8 @@ var Player = function (_Block) {
           dy = this.dy,
           onFloor = this.isOnFloor,
           crouching = this.isCrouching,
-          maxSpeed = this.maxSpeed * dt,
-          accel = this.accel * dt,
+          maxSpeed = this.maxSpeed,
+          accel = this.accel,
           key = this.keys,
           left = key.ArrowLeft || key.KeyA ? true : false,
           up = key.ArrowUp || key.KeyW || key.Space ? true : false,
@@ -2283,7 +2228,7 @@ var Player = function (_Block) {
         this.dy = 0;
       }
 
-      this.x += this.dx;
+      this.x += this.dx * dt;
       this.y += this.dy * dt;
 
       this.camX = this.x;
@@ -3596,8 +3541,9 @@ module.exports = function () {
     key: "pauseTimer",
     value: function pauseTimer() {
       if (!this.game.playing[0]) {
-        this.startTime -= this.pauseStart - Date.now();
+        if (this.startTime) this.startTime -= this.pauseStart - Date.now();
         this.game.playing[0] = true;
+        this.game.resetAnimate = true;
         this.game.animate();
         console.log('Play');
       } else {
@@ -3699,7 +3645,7 @@ module.exports = function () {
       if (e.code === 'Escape') {
         var div = document.getElementById('playMenu');
 
-        game.window.play.pauseTimer();
+        this.pauseTimer();
         var width = div.style.width.replace(/[px%]/i, '');
         if (width > 0) {
           div.style.width = 0;
