@@ -102,6 +102,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Button = function () {
   function Button(game, x, y, w, h, fontSize, str, eventName, callback) {
+    var _this = this;
+
     var autoDestroy = arguments.length > 9 && arguments[9] !== undefined ? arguments[9] : false;
 
     _classCallCheck(this, Button);
@@ -122,48 +124,30 @@ var Button = function () {
     this.cb = callback;
     this.autoDestroy = autoDestroy;
 
-    this.game.canvas.addEventListener('mousemove', this.onOver.bind(this));
+    this.onOver = function (e) {
+      if (_this.game.utils.mouseCollision(_this, { x: e.clientX, y: e.clientY })) {
+        _this.backColor = 'brown';
+        _this.draw();
+      } else {
+        _this.backColor = 'black';
+        _this.draw();
+      }
+    };
 
-    this.game.canvas.addEventListener('click', this.onClick.bind(this));
+    this.click = function (e) {
+      if (!_this.game.utils.mouseCollision(_this, { x: e.clientX, y: e.clientY })) return;
+      _this.cb();
+      if (autoDestroy) _this.destroy();
+    };
+
+    this.game.canvas.addEventListener('mousemove', this.onOver);
+
+    this.game.canvas.addEventListener('click', this.click);
 
     this.draw();
   }
 
   _createClass(Button, [{
-    key: 'onOver',
-    value: function onOver(e) {
-      if (this.mouseCollision({ x: e.clientX, y: e.clientY })) {
-        // canvas.style.cursor = 'pointer'
-        this.backColor = 'brown';
-        this.draw();
-      } else {
-        // canvas.style.cursor = 'default'
-        this.backColor = 'black';
-        this.draw();
-      }
-    }
-  }, {
-    key: 'onClick',
-    value: function onClick(e) {
-      if (!this.mouseCollision({ x: e.clientX, y: e.clientY })) return;
-      this.cb();
-      if (this.autoDestroy) this.destroy();
-    }
-  }, {
-    key: 'mouseCollision',
-    value: function mouseCollision(b) {
-      var a = this;
-      var aL = a.x,
-          aR = aL + a.w,
-          aT = a.y,
-          aB = aT + a.h,
-          bL = b.x,
-          bT = b.y;
-
-      if (aL <= bL && aR >= bL && aT <= bT && aB >= bT) return true;
-      return false;
-    }
-  }, {
     key: 'draw',
     value: function draw() {
       var game = this.game,
@@ -3882,6 +3866,18 @@ module.exports = function Utils(game) {
 
   this.textSize = function (c, txt) {
     return [c.measureText(txt).width, parseInt(c.font.match(/\d+/), 10) * 0.7];
+  };
+
+  this.mouseCollision = function (a, b) {
+    var aL = a.x,
+        aR = aL + a.w,
+        aT = a.y,
+        aB = aT + a.h,
+        bL = b.x,
+        bT = b.y;
+
+    if (aL <= bL && aR >= bL && aT <= bT && aB >= bT) return true;
+    return false;
   };
 
   this.catchBlockCollision = function (x, y) {
