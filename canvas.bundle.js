@@ -245,7 +245,7 @@ var Game = new _game2.default(canvas);
 var c = Game.c;
 
 Game.assets.tiles = __webpack_require__(/*! ./json/tiles.json */ "./src/json/tiles.json");
-Game.assets.img = __webpack_require__(/*! ./json/img.json */ "./src/json/img.json");
+Game.assets.textures = __webpack_require__(/*! ./json/img.json */ "./src/json/img.json");
 Game.select.tile = Game.assets.tiles.spaceGround;
 Game.cfg.scale = 64;
 Game.cfg.cols = 32;
@@ -259,8 +259,8 @@ for (var t in Game.assets.tiles) {
 }
 
 // Load IMG
-for (var i in Game.assets.img) {
-    Game.utils.loadImg(Game.assets.img[i]);
+for (var i in Game.assets.textures) {
+    Game.utils.loadImg(Game.assets.textures[i]);
 }
 
 // Player
@@ -307,27 +307,28 @@ var framePerSeconds = setInterval(function () {
 }, 1000);
 
 // Animation Loop
-Game.lastRender;
+var lastRender = void 0;
 
 Game.animate = function (time) {
-    if(!time) time = 0
-    Game.now = time;
+    if (!time) time = 0;
+    var now = time;
 
-    if (Game.resetAnimate) Game.lastRender = time;
+    if (Game.resetAnimate) lastRender = time;
 
-    var delta = Game.now - Game.lastRender;
-    // console.time('check')
+    var delta = now - lastRender;
 
+    if (delta > 100) delta = 100;
 
     if (Game.mode === 'play') {
         Game.window.play.update(delta);
+        // console.time('check')
         Game.window.play.draw();
+        // console.timeEnd('check')
     } else if (Game.mode === 'edit') Game.window.edit.update();
 
     displayInfo();
 
-    // console.timeEnd('check')
-    Game.lastRender = time;
+    lastRender = time;
 
     Game.resetAnimate = false;
     if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
@@ -657,7 +658,7 @@ var Game = function Game(canvas) {
 
   this.background = [];
   this.static = [];
-  this.moving = [];
+  this.dynamic = [];
   this.foreground = [];
 
   this.lastRender = null;
@@ -948,7 +949,7 @@ module.exports = function (game) {
   h2.id = 'playH2';
   div.appendChild(h2);
 
-  var layerName = ['background', 'static', 'moving', 'foreground'];
+  var layerName = ['background', 'static', 'dynamic', 'foreground'];
   // INPUT ROW
   var rowSpan = document.createElement('span');
   rowSpan.innerHTML = 'Row: ';
@@ -1015,7 +1016,7 @@ module.exports = function (game) {
   div.appendChild(colSpan);
 
   // SELECT LAYER
-  var layerType = ['background', 'static', 'moving', 'foreground', 'special'],
+  var layerType = ['background', 'static', 'dynamic', 'foreground', 'special'],
       layerBlock = document.createElement('select');
   layerBlock.id = 'layerBlock';
 
@@ -1283,7 +1284,7 @@ module.exports.load = function (Game) {
         var _loop2 = function _loop2(col) {
             var cell = Game.map[row][col];
 
-            var layerName = ['background', 'static', 'moving', 'foreground'];
+            var layerName = ['background', 'static', 'dynamic', 'foreground'];
             cell.forEach(function (layer, id) {
                 var mapLayer = Game[layerName[id]];
 
@@ -1326,7 +1327,7 @@ module.exports.load = function (Game) {
 module.exports.save = function (Game) {
     var map = [];
 
-    var layerName = ['background', 'static', 'moving', 'foreground'];
+    var layerName = ['background', 'static', 'dynamic', 'foreground'];
     layerName.forEach(function (name, id) {
         var layer = Game[name];
         layer.forEach(function (row, y) {
@@ -1350,10 +1351,10 @@ module.exports.save = function (Game) {
 /*!***************************!*\
   !*** ./src/json/img.json ***!
   \***************************/
-/*! exports provided: Spikes, BouncingBox, default */
+/*! exports provided: Spikes, BouncingBox, Block, default */
 /***/ (function(module) {
 
-module.exports = {"Spikes":{"name":"Spikes","url":"./img/spikes.png","img":null},"BouncingBox":{"name":"BouncingBox","url":"./img/bouncingBox.png","img":null}};
+module.exports = {"Spikes":{"name":"Spikes","url":"./img/spikes.png","img":null},"BouncingBox":{"name":"BouncingBox","url":"./img/bouncingBox.png","img":null},"Block":{"name":"Block","url":"./img/Block.jpg","img":null}};
 
 /***/ }),
 
@@ -1364,7 +1365,7 @@ module.exports = {"Spikes":{"name":"Spikes","url":"./img/spikes.png","img":null}
 /*! exports provided: map, default */
 /***/ (function(module) {
 
-module.exports = {"map":"#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.0.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.5.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-0.1.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.7.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.3.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.3.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.6.7.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.7.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.3.#.#-0.3.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-0.1.#.#-0.3.#.#-0.3.#.#-0.3.#.#-0.3.#.#-0.1.#.#-0.1.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.6.#.#-0.6.7.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.2.#.#-0.2.#.#-0.2.#.#-0.2.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-0.4.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.3.#.#-0.3.#.#-0.3.#.#-0.3.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#"};
+module.exports = {"map":"#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.0.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.5.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-0.1.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.7.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.3.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.3.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.6.7.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.7.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.3.#.#-0.3.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-0.1.#.#-0.3.#.#-0.3.#.#-0.3.#.#-0.3.#.#-0.1.#.#-0.1.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.6.#.#-0.6.7.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.6.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.2.#.#-0.2.#.#-0.2.#.#-0.2.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-0.4.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-0.#.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-0.3.#.#-0.3.#.#-0.3.#.#-0.3.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#,#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#-#.1.#.#"};
 
 /***/ }),
 
@@ -1417,7 +1418,7 @@ module.exports = {
 
   SwordSupport: [__webpack_require__(/*! ./objects/swordSupport */ "./src/objects/swordSupport.js"), 6, ['static']],
 
-  Sword: [__webpack_require__(/*! ./objects/sword */ "./src/objects/sword.js"), 7, ['moving'], 'SwordSupport']
+  Sword: [__webpack_require__(/*! ./objects/sword */ "./src/objects/sword.js"), 7, ['dynamic'], 'SwordSupport']
 };
 
 /***/ }),
@@ -1494,18 +1495,33 @@ module.exports = function () {
   }, {
     key: 'draw',
     value: function draw() {
-      var c = this.game.c,
-          scale = this.game.cfg.scale,
+      // const game      = this.game,
+      //       c         = game.c,
+      //       scale     = game.cfg.scale,
+      //       x         = this.x * scale + (scale - this.w),
+      //       y         = this.y * scale + (scale - this.h);
+
+
+      // c.drawImage(game.assets.textures.Block.img, x, y, this.w+1, this.h+1)
+      // if (this.game.mode === 'edit') {
+      //   c.strokeStyle = 'gray'
+      //   c.stroke()
+      // } 
+
+      var game = this.game,
+          c = game.c,
+          scale = game.cfg.scale,
           x = this.x * scale + (scale - this.w),
           y = this.y * scale + (scale - this.h);
 
       c.beginPath();
       c.fillStyle = this.color;
-      c.strokeStyle = 'gray';
-      c.lineWidth = 1;
-      c.rect(x, y, this.w + 1, this.h + 1);
+      c.rect(x, y, this.w, this.h);
       c.fill();
-      if (this.game.mode === 'edit') c.stroke();
+      if (this.game.mode === 'edit') {
+        c.strokeStyle = 'gray';
+        c.stroke();
+      }
       c.closePath();
     }
   }, {
@@ -1714,7 +1730,7 @@ var BouncingBox = function (_Block) {
           y = this.y * scale + (scale - this.h);
 
       c.beginPath();
-      c.drawImage(game.assets.img.BouncingBox.img, x, y, this.w + 1, this.h + 1);
+      c.drawImage(game.assets.textures.BouncingBox.img, x, y, this.w + 1, this.h + 1);
       c.closePath();
     }
   }, {
@@ -1902,6 +1918,22 @@ module.exports = function (_Block) {
       this.editUpdate();
     }
   }, {
+    key: 'draw',
+    value: function draw() {
+      var game = this.game,
+          c = game.c,
+          scale = game.cfg.scale,
+          x = this.x * scale + (scale - this.w),
+          y = this.y * scale + (scale - this.h);
+
+      c.beginPath();
+      c.fillStyle = this.color;
+      c.lineWidth = 1;
+      c.rect(x, y, this.w + 1, this.h + 1);
+      c.fill();
+      c.closePath();
+    }
+  }, {
     key: 'editUpdate',
     value: function editUpdate() {
       this.w = this.game.cfg.scale;
@@ -1946,9 +1978,9 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var GRAVITY = 0.0055;
-var JUMPFORCE = 1.3;
-var MAXSPEED = 0.8;
+var GRAVITY = 0.0035;
+var JUMPFORCE = 1.0;
+var MAXSPEED = 0.6;
 var ACCEL = 0.2;
 
 var Player = function (_Block) {
@@ -2071,12 +2103,11 @@ var Player = function (_Block) {
       var game = this.game,
           cfg = game.cfg,
           col = Math.floor(this.x / cfg.scale),
-          row = Math.floor(this.y / cfg.scale),
-          blockTopLeft = game.static[row - 1][col],
-          blockTopRight = game.static[row - 1][col + 1],
-          isCollidingTopLeft = this.isColliding(blockTopLeft, this),
-          isCollidingTopRight = this.isColliding(blockTopRight, this);
+          row = Math.floor((this.y - this.h) / cfg.scale),
+          isCollidingTopLeft = this.isColliding(game.static, row, col, this),
+          isCollidingTopRight = this.isColliding(game.static, row, col + 1, this);
 
+      // console.log(isCollidingTopLeft || isCollidingTopRight)
       if (isCollidingTopLeft || isCollidingTopRight) return;
 
       this.y -= this.h;
@@ -2117,6 +2148,8 @@ var Player = function (_Block) {
     key: 'move',
     value: function move(dt) {
       this.isIdle = true;
+
+      // console.log(this.x, this.y)
 
       var dx = this.dx,
           dy = this.dy,
@@ -2191,17 +2224,20 @@ var Player = function (_Block) {
 
       if (this.dy > 0) this.isOnFloor = false;
 
-      var maxSpeed = 63;
-      if (this.dy > 0) {
-        this.dy = this.dy > maxSpeed ? maxSpeed : this.dy;
-      } else if (this.dy < 0) {
-        this.dy = this.dy < -maxSpeed ? -maxSpeed : this.dy;
-      }
-      if (this.dx > 0) {
-        this.dx = this.dx > maxSpeed ? maxSpeed : this.dx;
-      } else if (this.dx < 0) {
-        this.dx = this.dx < -maxSpeed ? -maxSpeed : this.dx;
-      }
+      // const maxSpeed = 63
+      // if(this.dy > 0)
+      // {
+      //   this.dy = (this.dy > maxSpeed) ? maxSpeed : this.dy
+      // } else if(this.dy < 0) {
+      //   this.dy = (this.dy < -maxSpeed) ? -maxSpeed : this.dy
+      // }
+      // if(this.dx > 0)
+      // {
+      //   this.dx = (this.dx > maxSpeed) ? maxSpeed : this.dx
+      // } else if(this.dx < 0) {
+      //   this.dx = (this.dx < -maxSpeed) ? -maxSpeed : this.dx
+      // }
+
 
       // Map border
       var scale = this.game.cfg.scale,
@@ -2229,6 +2265,7 @@ var Player = function (_Block) {
         this.dy = 0;
       }
 
+      // console.log(this.x, dt, this.x*dt)
       this.x += this.dx * dt;
       this.y += this.dy * dt;
 
@@ -2246,16 +2283,18 @@ var Player = function (_Block) {
     }
   }, {
     key: 'isColliding',
-    value: function isColliding(box, crouching) {
-      if (!box) return false;else if (box.type != 'Wall') return false;
+    value: function isColliding(map, row, col, crouching) {
+      if (!map[row] || !map[row][col] && map[row][col] != 0) return true;else if (map[row][col].type != 'Wall') return false;
+      // console.log(col, row)
 
-      var l1 = box.getLeft(),
+      var box = map[row][col],
+          l1 = box.getLeft(),
           r1 = box.getRight(),
           t1 = box.getTop(),
           b1 = box.getBottom(),
           l2 = this.getLeft(),
           r2 = this.getRight(),
-          t2 = crouching ? this.camY : this.getTop(),
+          t2 = crouching ? this.getTop() - this.h : this.getTop(),
           b2 = this.getBottom();
 
       if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) {
@@ -2483,7 +2522,7 @@ module.exports = function (_Block) {
           y = this.y * scale + (scale - this.h);
 
       c.beginPath();
-      c.drawImage(game.assets.img.Spikes.img, x, y, this.w + 1, this.h + 1);
+      c.drawImage(game.assets.textures.Spikes.img, x, y, this.w + 1, this.h + 1);
       c.closePath();
     }
   }, {
@@ -2554,7 +2593,7 @@ module.exports = function (_Block) {
     _this.dx = 0.3;
 
     _this.id = 7;
-    _this.purpose = ['Moving'];
+    _this.purpose = ['Dynamic'];
 
     _this.link = 'SwordSupport';
     return _this;
@@ -2606,8 +2645,8 @@ module.exports = function (_Block) {
           scale = cfg.scale,
           oldScale = cfg.oldScale;
 
-      this.inX = this.inX / oldScale * scale;
-      this.inY = this.inY / oldScale * scale;
+      this.inX = scale / 2 - this.w / 2;
+      this.inY = scale / 2 - this.h / 2;
 
       this.w = scale / 2;
       this.h = scale / 2;
@@ -2720,11 +2759,23 @@ module.exports = function (_Block) {
     return _this;
   }
 
-  // draw() {
-
-  // }
-
   _createClass(SwordSupport, [{
+    key: 'draw',
+    value: function draw() {
+      var game = this.game,
+          c = game.c,
+          scale = game.cfg.scale,
+          x = this.x * scale + (scale - this.w),
+          y = this.y * scale + (scale - this.h);
+
+      c.beginPath();
+      c.fillStyle = this.color;
+      c.lineWidth = 1;
+      c.rect(x, y, this.w + 1, this.h + 1);
+      c.fill();
+      c.closePath();
+    }
+  }, {
     key: 'resolve',
     value: function resolve(obj, side) {
       if (obj.type === 'Sword') {}
@@ -2789,21 +2840,20 @@ module.exports = function (_Block) {
   _createClass(Wall, [{
     key: 'draw',
     value: function draw() {
-      var game = this.game;
-      var c = game.c;
+      var game = this.game,
+          c = game.c,
+          tile = game.assets.tiles[this.tile.name];
 
-      // c.beginPath()
-      c.drawImage(game.assets.tiles[this.tile.name].img, // IMG
+      c.drawImage(tile.img, // IMG
       this.tile.x, // CANVAS_X
       this.tile.y, // CANVAS_Y
-      game.assets.tiles[this.tile.name].size, // CANVAS_WIDTH
-      game.assets.tiles[this.tile.name].size, // CANVAS_HEIGHT
+      tile.size, // CANVAS_WIDTH
+      tile.size, // CANVAS_HEIGHT
       this.x * game.cfg.scale, // IMG_X
       this.y * game.cfg.scale, // IMG_Y 
       game.cfg.scale + 1, // IMG_WIDTH
       game.cfg.scale + 1 // IMG_HEIGHT
       );
-      // c.closePath()
     }
   }, {
     key: 'editUpdate',
@@ -2827,7 +2877,9 @@ module.exports = function (_Block) {
   }, {
     key: 'update',
     value: function update() {
-      this.editUpdate();
+      var game = this.game;
+      this.w = game.cfg.scale;
+      this.h = game.cfg.scale;
     }
 
     // collisionTop(obj) {
@@ -3041,7 +3093,7 @@ var Edit = function () {
       c.save();
       c.translate(tX, tY);
 
-      var layerName = ['background', 'static', 'moving', 'foreground'];
+      var layerName = ['background', 'static', 'dynamic', 'foreground'];
       if (uptAll) {
         var canvasCols = Math.ceil(canvas.width / scale);
         var canvasRows = Math.ceil(canvas.height / scale);
@@ -3274,7 +3326,7 @@ Edit.prototype.checkForClicks = function () {
       cfg = game.cfg,
       select = document.getElementById('selectBlock');
 
-  var layerName = ['background', 'static', 'moving', 'foreground', 'special'];
+  var layerName = ['background', 'static', 'dynamic', 'foreground', 'special'];
   var updtID = layerName.indexOf(game.select.layer);
   if (updtID === 4) updtID = 1;
 
@@ -3295,7 +3347,7 @@ Edit.prototype.checkForClicks = function () {
     if (game.select.block[3]) {
       var linkAproved = false;
 
-      layerName = ['background', 'static', 'moving', 'foreground'];
+      layerName = ['background', 'static', 'dynamic', 'foreground'];
       layerName.forEach(function (name) {
         var layer = game[name],
             theCell = layer[gridY][gridX];
@@ -3446,7 +3498,7 @@ module.exports = function () {
           colEnd = Math.ceil(cWidth / scale) + colStart + offMap * 2 > colMax ? colMax : Math.ceil(cWidth / scale) + colStart + offMap * 2,
           rowEnd = Math.ceil(cHeight / scale) + rowStart + offMap * 2 > rowStart ? rowMax : Math.ceil(cHeight / scale) + rowStart + offMap * 2;
 
-      var layerName = ['static', 'moving'];
+      var layerName = ['static', 'dynamic'];
       layerName.map(function (name) {
         var layer = game[name];
 
@@ -3506,11 +3558,11 @@ module.exports = function () {
           colEnd = Math.ceil(cWidth / scale) + colStart + offMap * 2 > colMax ? colMax : Math.ceil(cWidth / scale) + colStart + offMap * 2,
           rowEnd = Math.ceil(cHeight / scale) + rowStart + offMap * 2 > rowStart ? rowMax : Math.ceil(cHeight / scale) + rowStart + offMap * 2;
 
-      var layerName = ['background', 'static', 'moving', 'foreground'];
+      var layerName = ['background', 'static', 'dynamic', 'foreground'];
       layerName.map(function (name) {
         var layer = game[name];
 
-        if (name === 'moving') Player.draw();
+        if (name === 'dynamic') Player.draw();
 
         for (var y = rowStart; y < rowEnd; y++) {
           for (var x = colStart; x < colEnd; x++) {
@@ -3755,9 +3807,7 @@ module.exports = function Utils(game) {
   this.loadImg = function (obj) {
     var img = new Image();
     img.src = obj.url;
-    img.addEventListener('load', function () {
-      obj.img = img;
-    }, false);
+    obj.img = img;
   };
 
   this.lerp = function (value1, value2, amount) {
@@ -3814,7 +3864,7 @@ module.exports = function Utils(game) {
   };
 
   this.catchBlockCollision = function (x, y) {
-    var layerName = ['static', 'moving'];
+    var layerName = ['static', 'dynamic'];
 
     var toReturn = false;
 
