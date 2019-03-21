@@ -310,9 +310,9 @@ var framePerSeconds = setInterval(function () {
 Game.lastRender;
 
 Game.animate = function () {
-    Game.now = performance.now();
+    Game.now = Date.now();
 
-    if (Game.resetAnimate) Game.lastRender = performance.now();
+    if (Game.resetAnimate) Game.lastRender = Date.now();
 
     var delta = Game.now - Game.lastRender;
     // console.time('check')
@@ -326,7 +326,7 @@ Game.animate = function () {
     displayInfo();
 
     // console.timeEnd('check')
-    Game.lastRender = performance.now();
+    Game.lastRender = Date.now();
 
     Game.resetAnimate = false;
     if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
