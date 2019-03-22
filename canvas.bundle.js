@@ -2020,18 +2020,20 @@ var Player = function (_Block) {
     _this.isCrouching = false;
 
     _this.keys = {
-      'ArrowUp': false,
-      'Space': false,
-      'KeyD': false,
+      '38': false, // Up
+      '32': false, // Space
+      '90': false, // Z
 
-      'KeyS': false,
-      'ArrowDown': false,
-      'ShiftLeft': false,
 
-      'ArrowLeft': false,
-      'ArrowRight': false,
-      'KeyA': false,
-      'KeyW': false
+      '83': false, // S
+      '40': false, // Down
+      '16': false, // LShift
+
+
+      '39': false, // Right
+      '37': false, // Left
+      '81': false, // Q
+      '68': false // D
     };
 
     _this.collision = {
@@ -2148,7 +2150,6 @@ var Player = function (_Block) {
       this.isIdle = true;
 
       // console.log(this.x, this.y)
-
       var dx = this.dx,
           dy = this.dy,
           onFloor = this.isOnFloor,
@@ -2156,10 +2157,10 @@ var Player = function (_Block) {
           maxSpeed = this.maxSpeed,
           accel = this.accel,
           key = this.keys,
-          left = key.ArrowLeft || key.KeyA ? true : false,
-          up = key.ArrowUp || key.KeyW || key.Space ? true : false,
-          right = key.ArrowRight || key.KeyD ? true : false,
-          down = key.ArrowDown || key.KeyS || key.ShiftLeft ? true : false;
+          left = key['37'] || key['81'] ? true : false,
+          up = key['38'] || key['32'] || key['90'] ? true : false,
+          right = key['39'] || key['68'] ? true : false,
+          down = key['40'] || key['83'] || key['16'] ? true : false;
 
       if (this.isDead || this.hide) return;
 
@@ -3689,12 +3690,11 @@ module.exports = function () {
   }, {
     key: "onkeydown",
     value: function onkeydown(e) {
-      console.log(e.keyCode);
       var game = this.game;
       e.preventDefault();
       if (!game.playing[0]) return;
-      if (game.Player.keys.hasOwnProperty(e.code)) game.Player.keys[e.code] = true;
-      if (e.code === 'Escape') {
+      if (game.Player.keys.hasOwnProperty(e.keyCode)) game.Player.keys[e.keyCode] = true;
+      if (e.keyCode == 27) {
         var div = document.getElementById('playMenu');
 
         this.pauseTimer();
@@ -3708,7 +3708,7 @@ module.exports = function () {
         game.canvas.focus();
       }
 
-      if (e.code === 'KeyR') {
+      if (e.keyCode == 82) {
         game.init();
 
         if (!game.playing[0]) {
@@ -3727,8 +3727,8 @@ module.exports = function () {
       e.preventDefault();
       if (!game.playing[0]) return;
 
-      if (!game.Player.keys.hasOwnProperty(e.code)) return;
-      game.Player.keys[e.code] = false;
+      if (!game.Player.keys.hasOwnProperty(e.keyCode)) return;
+      game.Player.keys[e.keyCode] = false;
     }
   }, {
     key: "onmousedown",
