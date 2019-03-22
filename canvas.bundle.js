@@ -823,7 +823,7 @@ module.exports = function (game) {
   // CSS
   var head = document.head || document.getElementsByTagName('head')[0],
       style = document.createElement('style'),
-      css = '\n    #playMenu {\n      position: absolute;\n      width: 0;\n      top: 0;\n      bottom: 0;\n      left: 0;\n      background: rgba(15,15,15,0.99);\n      text-align: center;\n      overflow: hidden;\n      padding-top: calc(50vh - (7vh*2+10));\n    }\n\n    .playBtn {\n      display: block;\n      width: 20vw;\n      height: 7vh;\n      background: black;\n      color: white;\n      margin: 0 auto 10px auto;\n    }\n  ';
+      css = '\n    #playMenu {\n      position: absolute;\n      width: 0;\n      top: 0;\n      bottom: 0;\n      left: 0;\n      background: rgba(15,15,15,0.99);\n      text-align: center;\n      overflow: hidden;\n      padding-top: 36vh;\n      padding-top: calc(50vh - (7vh*2+10));\n    }\n\n    .playBtn {\n      display: block;\n      width: 20vw;\n      height: 7vh;\n      background: black;\n      color: white;\n      margin: 0 auto 10px auto;\n    }\n  ';
   head.appendChild(style);
   style.type = 'text/css';
   style.id = 'stylePlay';
@@ -913,7 +913,7 @@ module.exports = function (game) {
   // CSS
   var head = document.head || document.getElementsByTagName('head')[0],
       style = document.createElement('style'),
-      css = '\n    #toolbar {\n      position: absolute;\n      top: 0;\n      bottom: 0;\n      left: 0;\n      background: rgba(15,15,15, 1);\n      overflow: hidden;\n      text-align: center;\n      padding-top: 20vh;\n    }\n\n    #toolbar > * {\n      margin: 20px auto;\n    }\n\n    .dispBlock {\n      display: block;\n    }\n\n    #playH2 {\n      margin-bottom: 30px;\n    }\n\n    #btnHide {\n      position: absolute;\n      padding: ' + (game.canvas.height / 2 - 20) + ' 7px;\n      height: 100%;\n      top: 0;\n      right: 0;\n      background: black;\n      color: white;\n      margin: 0 auto;\n    }\n\n    .inputSpan > input {\n      width: 10%;\n    }\n\n    #selectSpan > * {\n      display: block;\n      margin: auto;\n    }\n\n    .playBtn {\n      border: 1px solid white;\n      padding: 10px 20px;\n      background: black;\n      font-weight: bold;\n      color: white;\n      margin: auto 5px !important;\n      cursor: pointer;\n    }\n\n    #errorMsg {\n      color: red;\n      font-size: 1.1em;\n    }\n  ';
+      css = '\n    #toolbar {\n      position: absolute;\n      top: 0;\n      bottom: 0;\n      left: 0;\n      background: rgba(15,15,15, 1);\n      overflow: hidden;\n      text-align: center;\n      padding-top: 20vh;\n    }\n\n    #toolbar > * {\n      margin: 20px auto;\n    }\n\n    .dispBlock {\n      display: block;\n    }\n\n    #playH2 {\n      margin-bottom: 30px;\n    }\n\n    #btnHide {\n      position: absolute;\n      padding: ' + (game.canvas.height / 2 - 20) + 'px 7px;\n      height: 100%;\n      top: 0;\n      right: 0;\n      background: black;\n      color: white;\n      margin: 0 auto;\n      text-decoration: none;\n    }\n\n    .inputSpan > input {\n      width: 10%;\n    }\n\n    #selectSpan > * {\n      display: block;\n      margin: auto;\n    }\n\n    .playBtn {\n      border: 1px solid white;\n      padding: 10px 20px;\n      background: black;\n      font-weight: bold;\n      color: white;\n      margin: auto 5px !important;\n      cursor: pointer;\n    }\n\n    #errorMsg {\n      color: red;\n      font-size: 1.1em;\n    }\n  ';
   head.appendChild(style);
   style.type = 'text/css';
   style.id = 'styleEdit';
@@ -976,6 +976,7 @@ module.exports = function (game) {
 
     game.cfg.rows = Number(newRows);
     game.cfg.updateAll = true;
+    game.translate.x = game.translate.y = 0;
   };
   rowSpan.appendChild(inputRows);
   div.appendChild(rowSpan);
@@ -1009,6 +1010,7 @@ module.exports = function (game) {
 
     game.cfg.cols = Number(newCols);
     game.cfg.updateAll = true;
+    game.translate.x = game.translate.y = 0;
   };
   colSpan.appendChild(inputCols);
   div.appendChild(colSpan);
@@ -3148,7 +3150,7 @@ var Edit = function () {
       div.insertBefore(toolBar, this.game.canvas);
 
       this.list.forEach(function (evt) {
-        return document.addEventListener(evt, _this, false);
+        return _this.game.canvas.addEventListener(evt, _this, false);
       });
     }
   }, {
@@ -3159,7 +3161,7 @@ var Edit = function () {
       this.game.cfg.scale = 64;
       console.log('End window Edit');
       this.list.forEach(function (evt) {
-        return document.removeEventListener(evt, _this2, false);
+        return _this2.game.canvas.removeEventListener(evt, _this2, false);
       });
 
       var elem = document.getElementById('toolbar'),
@@ -3651,7 +3653,7 @@ module.exports = function () {
 
       console.log('Start window Play');
       this.list.forEach(function (evt) {
-        return document.addEventListener(evt, _this, false);
+        return _this.game.canvas.addEventListener(evt, _this, false);
       });
 
       var divGame = document.getElementById('game'),
@@ -3665,7 +3667,7 @@ module.exports = function () {
 
       console.log('End window Play');
       this.list.forEach(function (evt) {
-        return document.removeEventListener(evt, _this2, false);
+        return _this2.game.canvas.removeEventListener(evt, _this2, false);
       });
 
       var menu = document.getElementById('playMenu'),
@@ -3827,13 +3829,13 @@ module.exports = function Utils(game) {
     // console.log('evenThis', el)
     el.listen = function () {
       list.forEach(function (evt) {
-        return document.addEventListener(evt, el, false);
+        return el.game.canvas.addEventListener(evt, el, false);
       });
     };
 
     el.mute = function () {
       list.forEach(function (evt) {
-        return document.removeEventListener(evt, el, false);
+        return el.game.canvas.removeEventListener(evt, el, false);
       });
     };
 
