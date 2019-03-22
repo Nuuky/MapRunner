@@ -860,14 +860,7 @@ module.exports = function (game) {
   btnRestart.value = 'RESTART';
   btnRestart.onclick = function (e) {
     e.preventDefault();
-    game.init();
-    game.playing[0] = true;
-    div.style.width = 0;
-    game.resetAnimate = true;
-    game.animate();
-    game.canvas.focus();
-    game.window.play.resetTimer();
-    game.Player.hide = false;
+    game.window.play.gameReset();
   };
   div.append(btnRestart);
 
@@ -2629,12 +2622,16 @@ module.exports = function (_Block) {
       this.inX += this.dx * dt;
 
       if (movingLeft && inX < 0) {
+        this.game.dynamic[this.y][this.x] = 0;
         this.x--;
+        this.game.dynamic[this.y][this.x] = this;
         this.inX = scale + this.inX;
       }
 
       if (!movingLeft && inX > scale) {
+        this.game.dynamic[this.y][this.x] = 0;
         this.x++;
+        this.game.dynamic[this.y][this.x] = this;
         this.inX = this.inX - scale;
       }
     }
@@ -3553,7 +3550,7 @@ module.exports = function () {
       c.save();
       c.translate(tX, tY);
 
-      var offMap = 10,
+      var offMap = 1,
           colStart = Math.floor(tX / scale * -1) - offMap > 0 ? Math.floor(tX / scale * -1) - offMap : 0,
           rowStart = Math.floor(tY / scale * -1) - offMap > 0 ? Math.floor(tY / scale * -1) - offMap : 0,
           colEnd = Math.ceil(cWidth / scale) + colStart + offMap * 2 > colMax ? colMax : Math.ceil(cWidth / scale) + colStart + offMap * 2,
@@ -3678,6 +3675,21 @@ module.exports = function () {
       this.resetTimer();
     }
   }, {
+    key: "gameReset",
+    value: function gameReset() {
+      game.init();
+
+      if (!game.playing[0]) {
+        game.playing[0] = true;
+        game.animate();
+      }
+      game.canvas.focus();
+      game.window.play.resetTimer();
+      game.Player.hide = false;
+      game.Player.dx = 0;
+      game.Player.dy = 0;
+    }
+  }, {
     key: "handleEvent",
     value: function handleEvent(evt) {
       var handler = "on" + evt.type;
@@ -3710,17 +3722,7 @@ module.exports = function () {
         game.canvas.focus();
       }
 
-      if (e.keyCode == 82) {
-        game.init();
-
-        if (!game.playing[0]) {
-          game.playing[0] = true;
-          game.animate();
-        }
-        game.canvas.focus();
-        game.window.play.resetTimer();
-        game.Player.hide = false;
-      }
+      if (e.keyCode == 82) this.gameReset();
     }
   }, {
     key: "onkeyup",
