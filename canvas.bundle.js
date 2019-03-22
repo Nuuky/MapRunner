@@ -3677,6 +3677,7 @@ module.exports = function () {
   }, {
     key: "gameReset",
     value: function gameReset() {
+      var game = this.game;
       game.init();
 
       if (!game.playing[0]) {
@@ -3684,7 +3685,7 @@ module.exports = function () {
         game.animate();
       }
       game.canvas.focus();
-      game.window.play.resetTimer();
+      this.resetTimer();
       game.Player.hide = false;
       game.Player.dx = 0;
       game.Player.dy = 0;
