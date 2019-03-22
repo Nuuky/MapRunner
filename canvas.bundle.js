@@ -2625,14 +2625,17 @@ module.exports = function (_Block) {
         this.game.dynamic[this.y][this.x] = 0;
         this.x--;
         this.game.dynamic[this.y][this.x] = this;
-        this.inX = scale + this.inX;
+
+        this.inX += scale;
       }
 
       if (!movingLeft && inX > scale) {
         this.game.dynamic[this.y][this.x] = 0;
         this.x++;
         this.game.dynamic[this.y][this.x] = this;
-        this.inX = this.inX - scale;
+
+        // console.log(this.x, this.inX , this.inX - scale)
+        this.inX -= scale;
       }
     }
   }, {
@@ -2640,8 +2643,7 @@ module.exports = function (_Block) {
     value: function editUpdate() {
       var game = this.game,
           cfg = game.cfg,
-          scale = cfg.scale,
-          oldScale = cfg.oldScale;
+          scale = cfg.scale;
 
       this.inX = scale / 2 - this.w / 2;
       this.inY = scale / 2 - this.h / 2;
@@ -2682,13 +2684,12 @@ module.exports = function (_Block) {
           }
           break;
 
-        case 'Sword':
-          this.dx = -this.dx;
-          break;
-
         case 'Player':
           obj.die();
           break;
+
+        default:
+          this.dx = -this.dx;
       }
     }
   }]);
