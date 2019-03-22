@@ -1048,7 +1048,6 @@
   }
   class Block {
     constructor(x, y, Game)  {
-      console.log(Game)
       this.type       = 'Block'
       this.game       = Game
       this.x          = x
