@@ -2075,6 +2075,16 @@ function Game(M){
   this.canvas.width = innerWidth
   this.canvas.height = innerHeight
 
+  
+  this.cfg = {
+    name      : "default",
+    cols      : 32,
+    rows      : 32,
+    scale     : 64,
+    oldScale  : 64,
+    updateArr : [[], [], [], []],
+    updateAll : false
+  }
 
 
   this.utils = {
@@ -2359,36 +2369,24 @@ function Game(M){
 
   this.Objects = {  
     // MAP OBJECTS: [CLASS, ID, PURPOSE, LINK]
-    Block:        [require('./objects/block'),        0,  ['background']                 ],
+    Block:        [Block,        0,  ['background']                 ],
   
-    Wall:         [require('./objects/wall'),         1,  [  'static'  ]                 ],
+    Wall:         [Wall,         1,  [  'static'  ]                 ],
   
-    BouncingBox:  [require('./objects/bouncingBox'),  2,  [  'static'  ]                 ],
+    BouncingBox:  [BouncingBox,  2,  [  'static'  ]                 ],
   
-    Spikes:       [require('./objects/spikes'),       3,  [  'static'  ]                 ],
+    Spikes:       [Spikes,       3,  [  'static'  ]                 ],
   
-    Spawn:        [require('./objects/spawn'),        4,  [  'special' ]                 ],
+    Spawn:        [Spawn,        4,  [  'special' ]                 ],
   
-    End:          [require('./objects/end'),          5,  [  'special' ]                 ],
+    End:          [End,          5,  [  'special' ]                 ],
   
-    SwordSupport: [require('./objects/swordSupport'), 6,  [  'static'  ]                 ],
+    SwordSupport: [SwordSupport, 6,  [  'static'  ]                 ],
   
-    Sword:        [require('./objects/sword'),        7,  [  'dynamic' ],  'SwordSupport'],
+    Sword:        [Sword,        7,  [  'dynamic' ],  'SwordSupport'],
   }
 
   this.editObjects = Object.values(this.Objects).filter(o => typeof o[1] === 'number')
-
-  this.utils = new utils(this)
-  
-  this.cfg = {
-    name      : "default",
-    cols      : 32,
-    rows      : 32,
-    scale     : 64,
-    oldScale  : 64,
-    updateArr : [[], [], [], []],
-    updateAll : false
-  }
 
   this.mode = "edit"
 
