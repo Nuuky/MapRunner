@@ -593,7 +593,7 @@
       this.list.forEach(evt => this.game.canvas.addEventListener(evt, this, false));
   
       const divGame = document.getElementById('game'),
-            menu    = require('../html_elements/playMenu')(this.game);
+            menu    = gameMenu(this.game);
       divGame.insertBefore(menu, this.game.canvas)
     }
   
@@ -779,7 +779,7 @@
     start() {
       console.log('Start window Edit')
       const div = document.getElementById('game'),
-            toolBar = require('../html_elements/toolbar')(this.game)
+            toolBar = toolbar(this.game)
       div.insertBefore(toolBar, this.game.canvas)
   
       this.list.forEach(evt => this.game.canvas.addEventListener(evt, this, false));
@@ -2152,7 +2152,7 @@ function Game(M){
       return false
     },
     
-    catchBlockCollision: (game, x, y) => {
+    catchBlockCollision: (x, y) => {
       const layerName = ['static', 'dynamic']
   
       let toReturn = false
@@ -2324,7 +2324,7 @@ function Game(M){
             if(child) return
             if(!map[b] || !map[b][a]) return
       
-            getTileValue(game, a , b, false, true)
+            game.utils.tileManager.getValue(game, a , b, false, true)
             updateArr.push({x: a, y: b})
         }
       
@@ -2505,7 +2505,7 @@ function Game(M){
                   switch (layer) {
                       case 1:
                           mapLayer[row][col] = new block[0](col, row, Game)
-                          autotile.getValue(Game, col, row, false, false)
+                          game.utils.tileManager.getValue(Game, col, row, false, false)
                           break;
   
                       case 4:
@@ -2579,16 +2579,16 @@ function Game(M){
   const displayInfo = () => {
       fpsCount++
       
-      c.beginPath()
-      c.fillStyle = "rgba(0, 0, 0, 0.5)";
-      c.fillRect(canvas.width - 80, 0, 100, 40)
-      c.fillStyle = "white";
-      c.font = "11px Arial";
-      c.fillText(`ZOOM: x${(Game.cfg.scale/64).toFixed(2)}`, canvas.width - 75, 15);
-      c.fillText(`FPS: ${dispFps}`, canvas.width - 75, 30);
-      c.rect(0, 0, canvas.width, canvas.height)
-      c.stroke()
-      c.closePath()
+      game.c.beginPath()
+      game.c.fillStyle = "rgba(0, 0, 0, 0.5)";
+      game.c.fillRect(game.canvas.width - 80, 0, 100, 40)
+      game.c.fillStyle = "white";
+      game.c.font = "11px Arial";
+      game.c.fillText(`ZOOM: x${(game.cfg.scale/64).toFixed(2)}`, game.canvas.width - 75, 15);
+      game.c.fillText(`FPS: ${dispFps}`, game.canvas.width - 75, 30);
+      game.c.rect(0, 0, game.canvas.width, game.canvas.height)
+      game.c.stroke()
+      game.c.closePath()
   }
 
   const framePerSeconds = setInterval(() => {
@@ -2603,27 +2603,27 @@ function Game(M){
       if(!time) time = 0
       const now = time
 
-      if(this.resetAnimate) lastRender = time
+      if(game.resetAnimate) lastRender = time
 
       let delta = now - lastRender;
 
       if(delta > 100) delta = 100
 
-      if (this.mode === 'play') {
-        this.window.play.update(delta)
+      if (game.mode === 'play') {
+        game.window.play.update(delta)
           // console.time('check')
-          this.window.play.draw()
+          game.window.play.draw()
           // console.timeEnd('check')
       }
 
-      else if (this.mode === 'edit') this.window.edit.update()
+      else if (game.mode === 'edit') game.window.edit.update()
       
       displayInfo()
       
       lastRender = time
 
-      if(this.resetAnimate) this.resetAnimate = false
-      if(this.playing[0]) window.requestAnimationFrame(this.animate);
+      if(game.resetAnimate) game.resetAnimate = false
+      if(game.playing[0]) window.requestAnimationFrame(game.animate);
   }
 }
 
@@ -2666,3 +2666,530 @@ var Runner = new Game()
       }, 200)
   })
   btns = [btn1, btn2]
+
+
+  function gameMenu(game) {
+    // CSS
+    const head = document.head || document.getElementsByTagName('head')[0],
+          style = document.createElement('style'),
+          css = `
+      #playMenu {
+        position: absolute;
+        width: 0;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(15,15,15,0.99);
+        text-align: center;
+        overflow: hidden;
+        padding-top: 36vh;
+        padding-top: calc(50vh - (7vh*2+10));
+      }
+  
+      .playBtn {
+        display: block;
+        width: 20vw;
+        height: 7vh;
+        background: black;
+        color: white;
+        margin: 0 auto 10px auto;
+      }
+    `
+    head.appendChild(style);
+    style.type = 'text/css';
+    style.id = 'stylePlay';
+    if (style.styleSheet){
+      // This is required for IE8 and below.
+      style.styleSheet.cssText = css;
+    } else {
+      style.appendChild(document.createTextNode(css));
+    }
+  
+  
+  
+    // CONTAINER
+    const div = document.createElement('div')
+    div.id    = 'playMenu'
+  
+    
+  
+    // BUTTON Resume
+    const btnResume = document.createElement('input')
+    btnResume.id    = 'btnResume'
+    btnResume.type  = 'button'
+    btnResume.classList.add('playBtn')
+    btnResume.value = 'RESUME'
+    btnResume.onclick = (e) => {
+      e.preventDefault()
+  
+      game.window.play.pauseTimer()
+      div.style.width = 0
+    }
+    div.append(btnResume)
+  
+    
+  
+    // BUTTON Restart
+    const btnRestart = document.createElement('input')
+    btnRestart.id    = 'btnRestart'
+    btnRestart.type  = 'button'
+    btnRestart.classList.add('playBtn')
+    btnRestart.value = 'RESTART'
+    btnRestart.onclick = (e) => {
+      e.preventDefault()
+      game.window.play.gameReset()
+    }
+    div.append(btnRestart)
+  
+    
+  
+    // BUTTON EDIT
+    const btnEdit = document.createElement('input')
+    btnEdit.id    = 'btnEdit'
+    btnEdit.type  = 'button'
+    btnEdit.classList.add('playBtn')
+    btnEdit.value = 'EDIT MAP'
+    btnEdit.onclick = (e) => {
+      e.preventDefault()
+  
+      game.window.play.end()
+      game.mode = 'edit'
+      game.window.edit.start()
+  
+      game.init()
+      game.playing = [true, true]
+      game.cfg.updateAll = true
+      game.canvas.focus()
+      game.animate()
+    }
+    div.append(btnEdit)
+  
+  
+  
+  
+    return div
+  }
+
+
+  function toolbar(game) {
+    // CSS
+    const head = document.head || document.getElementsByTagName('head')[0],
+          style = document.createElement('style'),
+          css = `
+      #toolbar {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(15,15,15, 1);
+        overflow: hidden;
+        text-align: center;
+        padding-top: 20vh;
+      }
+  
+      #toolbar > * {
+        margin: 20px auto;
+      }
+  
+      .dispBlock {
+        display: block;
+      }
+  
+      #playH2 {
+        margin-bottom: 30px;
+      }
+  
+      #btnHide {
+        position: absolute;
+        padding: ${game.canvas.height/2-20}px 7px;
+        height: 100%;
+        top: 0;
+        right: 0;
+        background: black;
+        color: white;
+        margin: 0 auto;
+        text-decoration: none;
+      }
+  
+      .inputSpan > input {
+        width: 10%;
+      }
+  
+      #selectSpan > * {
+        display: block;
+        margin: auto;
+      }
+  
+      .playBtn {
+        border: 1px solid white;
+        padding: 10px 20px;
+        background: black;
+        font-weight: bold;
+        color: white;
+        margin: auto 5px !important;
+        cursor: pointer;
+      }
+  
+      #errorMsg {
+        color: red;
+        font-size: 1.1em;
+      }
+    `
+    head.appendChild(style);
+    style.type = 'text/css';
+    style.id = 'styleEdit'
+    if (style.styleSheet){
+      // This is required for IE8 and below.
+      style.styleSheet.cssText = css;
+    } else {
+      style.appendChild(document.createTextNode(css));
+    }
+  
+    // CONTAINER
+    const div = document.createElement('div')
+    div.id          = 'toolbar'
+    div.style.width = '25%'
+  
+  
+    const btnHide = document.createElement('a')
+    btnHide.id = 'btnHide'
+    btnHide.innerHTML       = '|||'
+    btnHide.href = ''
+    btnHide.onclick = (e) => {
+      e.preventDefault()
+      const width = div.style.width.replace(/px|%/i, '')
+      // e.preventDefault()
+      if(width > 20) div.style.width = 20
+      else div.style.width = '25%'
+    }
+    div.appendChild(btnHide)
+  
+  
+    // TITLE
+    const h2 = document.createElement('h2')
+    h2.innerHTML = "SETTINGS:"
+    h2.id = 'playH2'
+    div.appendChild(h2)
+  
+  
+    const layerName = ['background', 'static', 'dynamic', 'foreground']
+    // INPUT ROW
+    const rowSpan       = document.createElement('span')
+    rowSpan.innerHTML   = 'Row: '
+    rowSpan.classList.add('dispBlock', 'inputSpan')
+    const inputRows     = document.createElement('input')
+    inputRows.type      = 'number'
+    inputRows.value     = game.cfg.rows
+    inputRows.onchange  = function(e) {
+      const newRows     = e.target.value,
+            map         = [];
+  
+      layerName.forEach((name) => {
+        const layer = game[name]
+  
+        for(let j = 0; j < newRows; j++) {
+          if(layer[j]) map[j] = layer[j]
+          else {
+            map[j] = []
+            for(let i = 0; i < game.cfg.cols; i++) {
+              if(name === 'background') map[j][i] = new game.Objects.Block[0](i, j, game)
+              else map[j][i] = 0
+            }
+          }
+        }
+  
+        game[name] = map
+      })
+  
+      game.cfg.rows = Number(newRows)
+      game.cfg.updateAll = true
+      game.translate.x = game.translate.y = 0
+    }
+    rowSpan.appendChild(inputRows)
+    div.appendChild(rowSpan)
+  
+  
+    // INPUT COL
+    const colSpan       = document.createElement('span')
+    colSpan.innerHTML   = 'Col: '
+    colSpan.classList.add('dispBlock', 'inputSpan')
+    const inputCols = document.createElement('input')
+    inputCols.type  = 'number'
+    inputCols.value = game.cfg.cols
+    inputCols.onchange = function(e) {
+      const newCols     = e.target.value
+  
+  
+  
+      layerName.forEach((name) => {
+        const layer = game[name]
+  
+        let map = []
+  
+        for(let j = 0; j < game.cfg.rows; j++) {
+          map[j] = []
+          for(let i = 0; i < newCols; i++) {
+            if(layer[j][i]) map[j][i] = layer[j][i]
+            else {
+              if(name === 'background') map[j][i] = new game.Objects.Block[0](i, j, game)
+              else map[j][i] = 0
+            }
+          }
+        }
+  
+        game[name] = map
+      })
+  
+      game.cfg.cols = Number(newCols)
+      game.cfg.updateAll = true
+      game.translate.x = game.translate.y = 0
+    }
+    colSpan.appendChild(inputCols)
+    div.appendChild(colSpan)
+  
+  
+    // SELECT LAYER
+    const layerType = ['background', 'static', 'dynamic', 'foreground', 'special'],
+          layerBlock = document.createElement('select')
+    layerBlock.id    = 'layerBlock'
+  
+    for (var i = 0; i < layerType.length; i++) {
+      const option  = document.createElement("option")
+      option.value  = layerType[i]
+      option.text   = layerType[i]
+      layerBlock.appendChild(option)
+    }
+  
+    
+    layerBlock.value  = 'static'
+    game.select.layer = 'static'
+  
+    layerBlock.style.display = 'block'
+    layerBlock.onchange = (e) => {
+      const id    = e.target.selectedIndex,
+            value = e.target[id].value
+      game.select.layer = value
+  
+      document.dispatchEvent(refreshBlockType);
+    }
+    const layerSpan       = document.createElement('span')
+    layerSpan.innerHTML   = 'Layer '
+    layerSpan.classList.add('dispBlock')
+    layerSpan.id          = 'selectSpan'
+    layerSpan.appendChild(layerBlock)
+    div.appendChild(layerSpan)
+  
+  
+    // SELECT BLOCK
+    const selectSpan       = document.createElement('span')
+    selectSpan.classList.add('dispBlock')
+    selectSpan.id          = 'selectSpan'
+    div.appendChild(selectSpan)
+  
+  
+  
+  
+    function makeBlockSelect() {
+      selectSpan.innerHTML = 'Block Type: '
+  
+      const selectBlock = document.createElement('select')
+      selectBlock.id = 'selectBlock'
+    
+    
+      const hasSpawn = typeExist('Spawn', game.static), 
+            hasEnd   = typeExist('End',   game.static);
+    
+      let option  = document.createElement("option")
+      selectBlock.appendChild(option)
+      for (var i = 0; i < game.editObjects.length; i++) {
+        const obj   = game.editObjects[i],
+              layer = game.select.layer;
+    
+        if (obj[2] != layer) continue
+    
+        option  = document.createElement("option")
+        option.value  = obj[0].name
+        option.text   = obj[0].name
+        if(obj[1] === 4 && hasSpawn) option.disabled = true
+        else if(obj[1] === 5 && hasEnd) option.disabled = true
+        selectBlock.appendChild(option)
+      }
+    
+      selectBlock.style.display = 'block'
+      selectBlock.onchange = (e) => {
+        const id    = e.target.selectedIndex,
+              value = e.target[id].value
+        game.select.block = game.Objects[value]
+      }
+  
+      selectSpan.appendChild(selectBlock)
+    }
+  
+    window.refreshBlockType = new Event('refreshBlockType');
+    document.addEventListener('refreshBlockType', makeBlockSelect, false);
+  
+    document.dispatchEvent(refreshBlockType);
+  
+  
+    // BLOCK PARAMS
+  
+  
+    // LOAD MAP
+    const loadMap = document.createElement('input')
+    loadMap.type = 'text'
+    //div.appendChild(loadMap)
+  
+  
+    // BUTTON PLAY
+    const btnPlay = document.createElement('input')
+    btnPlay.type = 'button'
+    btnPlay.value = 'Play'
+    btnPlay.classList.add('playBtn')
+    btnPlay.onclick = (e) => {
+      // e.preventDefault()
+  
+      const hasSpawn = typeExist('Spawn', game.static),
+            hasEnd   = typeExist('End',   game.static);
+  
+      if (!hasSpawn || !hasEnd) {
+        return errorMsg.innerHTML = `You can't play without ${(!hasSpawn) ? 'Spawn' : 'End'} block !`
+      }
+  
+      game.window[game.mode].end()
+      game.mode = 'play'
+  
+  
+      game.init(true)
+      game.cfg.updateAll = true
+      game.canvas.focus()
+      game.window.play.resetTimer()
+      game.Player.hide = false
+      if(!game.playing[0]) {
+        game.playing[0] = true
+        game.resetAnimate = true
+        game.animate()
+      }
+      game.window.play.start()
+    }
+    div.appendChild(btnPlay)
+  
+  
+  
+  
+    // BUTTON SAVE
+    const btnSave = document.createElement('input')
+    btnSave.type = 'button'
+    btnSave.value = 'Save'
+    btnSave.classList.add('playBtn')
+    btnSave.onclick = (e) => {
+      // e.preventDefault();
+  
+      let str = ''
+      
+      const mapTest = game.static;
+  
+      for(let row = 0; row < mapTest.length; row++) {
+        for(let col = 0; col < mapTest[0].length; col++) {
+          layerName.forEach((name, id) => {
+            const layer = game[name]
+            if(!layer[row][col]) str += '#'
+            else str += layer[row][col].id
+            
+            str += (id+1 < layerName.length) ? '.' : ''
+          })
+  
+          str += (col+1 < mapTest[0].length) ? '-' : ''
+        }
+  
+        str += (row+1 < mapTest.length) ? ',' : ''
+      }
+      
+      
+      layerName.forEach(name => {
+        const layer = game[name]
+  
+  
+      })
+      
+      copyToClipboard(str)
+      alert('The map has been copied on your clipboard');
+  }
+  div.appendChild(btnSave)
+  
+  
+  
+  const errorMsg  = document.createElement('span')
+  errorMsg.classList.add('dispBlock')
+  errorMsg.id     = 'errorMsg'
+  div.appendChild(errorMsg)
+  
+  
+  
+  
+  return div
+
+
+
+
+  
+  
+  // FUNCTIONS
+  function copyToClipboard(text){
+    var dummy = document.createElement("input");
+    document.body.appendChild(dummy);
+    dummy.setAttribute('value', text);
+    dummy.select();
+    document.execCommand("copy");
+    document.body.removeChild(dummy);
+  }
+  
+  function flatten(obj) {
+    var result = Object.create(obj);
+    result.type = obj.type
+    if(obj.tile) 
+    {
+        result.tile = {}
+        result.tile.name = obj.tile.name
+        result.tile.value = obj.tile.value
+    }
+    return result;
+  }
+  
+  function classToNumber(className) {
+    switch(className) {
+       case 'Block':
+         return 0
+  
+      case 'Wall':
+        return 1
+  
+      case 'BouncingBox':
+        return 2
+  
+      case 'Spikes':
+        return 3
+  
+      case 'Spawn':
+        return 4
+  
+      case 'End':
+        return 5
+  
+      default:
+        return false
+      // case 4:
+      //   return
+  
+      // case 5:
+      //   return
+    }
+  }
+  
+  function typeExist(type, map) {
+    for(let row = 0; row < map.length; row++) {
+      if(map[row].some(cell => cell.type === type)) return true
+    }
+  }
+}
+  
+  
