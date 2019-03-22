@@ -140,9 +140,9 @@ var Button = function () {
       if (autoDestroy) _this.destroy();
     };
 
-    this.game.canvas.addEventListener('mousemove', this.onOver);
+    document.addEventListener('mousemove', this.onOver);
 
-    this.game.canvas.addEventListener('click', this.click);
+    document.addEventListener('click', this.click);
 
     this.draw();
   }
@@ -198,8 +198,8 @@ var Button = function () {
   }, {
     key: 'destroy',
     value: function destroy() {
-      this.game.canvas.removeEventListener('mousemove', this.onOver);
-      this.game.canvas.removeEventListener('click', this.click);
+      document.removeEventListener('mousemove', this.onOver);
+      document.removeEventListener('click', this.click);
     }
 
     // canvas.on('handleClick', function(e, mouse)
@@ -282,10 +282,8 @@ Game.init = function () {
 };
 
 // Display FPS / ZOOM
-var fps = 60,
-    fpsCount = 0,
+var fpsCount = 0,
     dispFps = 0;
-var interval = 1000 / fps;
 var displayInfo = function displayInfo() {
     fpsCount++;
 
@@ -330,7 +328,7 @@ Game.animate = function (time) {
 
     lastRender = time;
 
-    Game.resetAnimate = false;
+    if (Game.resetAnimate) Game.resetAnimate = false;
     if (Game.playing[0]) window.requestAnimationFrame(Game.animate);
 };
 
@@ -3149,7 +3147,7 @@ var Edit = function () {
       div.insertBefore(toolBar, this.game.canvas);
 
       this.list.forEach(function (evt) {
-        return _this.game.canvas.addEventListener(evt, _this, false);
+        return document.addEventListener(evt, _this, false);
       });
     }
   }, {
@@ -3160,7 +3158,7 @@ var Edit = function () {
       this.game.cfg.scale = 64;
       console.log('End window Edit');
       this.list.forEach(function (evt) {
-        return _this2.game.canvas.removeEventListener(evt, _this2, false);
+        return document.removeEventListener(evt, _this2, false);
       });
 
       var elem = document.getElementById('toolbar'),
@@ -3652,7 +3650,7 @@ module.exports = function () {
 
       console.log('Start window Play');
       this.list.forEach(function (evt) {
-        return _this.game.canvas.addEventListener(evt, _this, false);
+        return document.addEventListener(evt, _this, false);
       });
 
       var divGame = document.getElementById('game'),
@@ -3666,7 +3664,7 @@ module.exports = function () {
 
       console.log('End window Play');
       this.list.forEach(function (evt) {
-        return _this2.game.canvas.removeEventListener(evt, _this2, false);
+        return document.removeEventListener(evt, _this2, false);
       });
 
       var menu = document.getElementById('playMenu'),
@@ -3825,16 +3823,16 @@ module.exports = function Utils(game) {
 
   this.events = function (el, list) {
     // list =>  ("ontouchstart" in window) ? ["touchstart", "touchmove", "touchend"] : ["mousedown", "mousemove", "mouseup", "keyup", "keydown", "wheel", "mouseleave"]
-    console.log('evenThis', el);
+    // console.log('evenThis', el)
     el.listen = function () {
       list.forEach(function (evt) {
-        return el.game.canvas.addEventListener(evt, el, false);
+        return document.addEventListener(evt, el, false);
       });
     };
 
     el.mute = function () {
       list.forEach(function (evt) {
-        return el.game.canvas.removeEventListener(evt, el, false);
+        return document.removeEventListener(evt, el, false);
       });
     };
 
