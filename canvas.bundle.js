@@ -2672,7 +2672,7 @@ module.exports = function (_Block) {
     value: function resolve(obj, side) {
 
       var game = this.game,
-          dir = this.dx > 0 ? 1 : 0,
+          dir = this.dx > 0 ? 2 : -1,
           map = game.static,
           scale = game.cfg.scale,
           movingLeft = this.dx > 0 ? false : true;
