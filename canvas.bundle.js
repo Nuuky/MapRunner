@@ -3689,6 +3689,7 @@ module.exports = function () {
   }, {
     key: "onkeydown",
     value: function onkeydown(e) {
+      console.log(e.keyCode);
       var game = this.game;
       e.preventDefault();
       if (!game.playing[0]) return;
