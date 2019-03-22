@@ -2634,7 +2634,6 @@ module.exports = function (_Block) {
         this.x++;
         this.game.dynamic[this.y][this.x] = this;
 
-        // console.log(this.x, this.inX , this.inX - scale)
         this.inX -= scale;
       }
     }
@@ -2672,7 +2671,7 @@ module.exports = function (_Block) {
     value: function resolve(obj, side) {
 
       var game = this.game,
-          dir = this.dx > 0 ? 2 : -1,
+          dir = this.dx > 0 ? 1 : 0,
           map = game.static,
           scale = game.cfg.scale,
           movingLeft = this.dx > 0 ? false : true;
@@ -2684,12 +2683,13 @@ module.exports = function (_Block) {
           }
           break;
 
+        case 'Sword':
+          this.dx = -this.dx;
+          break;
+
         case 'Player':
           obj.die();
           break;
-
-        default:
-          this.dx = -this.dx;
       }
     }
   }]);
