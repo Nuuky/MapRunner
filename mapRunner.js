@@ -2055,7 +2055,6 @@
         
         case 'Player':
           obj.die()
-          console.log("is dead !")
           break;
       }
     }
