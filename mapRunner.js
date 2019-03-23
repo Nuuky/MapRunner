@@ -3113,7 +3113,7 @@ var Runner = new Game()
       copyToClipboard(str)
       alert('The map has been copied on your clipboard');
   }
-  div.appendChild(btnSave)
+  // div.appendChild(btnSave)
   
   
   
