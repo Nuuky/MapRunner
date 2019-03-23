@@ -2068,7 +2068,7 @@ function Game(M){
   var game = this
 
   this.canvas = document.getElementById('canvas')
-  this.c = canvas.getContext('2d');
+  this.c = this.canvas.getContext('2d');
   
   this.canvas.oncontextmenu = e => e.preventDefault();
   this.canvas.width = innerWidth
