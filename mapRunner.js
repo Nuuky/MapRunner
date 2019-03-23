@@ -275,8 +275,8 @@
         if(game.translate.x == tx && game.translate.y == ty) {
             Player.spawn()
         } else {
-          game.translate.x = game.utils.lerp(game.translate.x, tx, 0.2)
-          game.translate.y = game.utils.lerp(game.translate.y, ty, 0.2)
+          game.translate.x = game.utils.lerp(game.translate.x, tx, 0.1)
+          game.translate.y = game.utils.lerp(game.translate.y, ty, 0.1)
           this.x = game.translate.x
           this.y = game.translate.y
         }
@@ -2055,6 +2055,7 @@
         
         case 'Player':
           obj.die()
+          console.log("is dead !")
           break;
       }
     }
@@ -2604,12 +2605,12 @@ function Game(M){
 
       if(game.resetAnimate) lastRender = time
 
-      let delta = now - lastRender;
+      this.dt = now - lastRender;
 
-      if(delta > 100) delta = 100
+      if(this.dt > 100) this.dt = 100
 
       if (game.mode === 'play') {
-        game.window.play.update(delta)
+        game.window.play.update(this.dt)
           // console.time('check')
           game.window.play.draw()
           // console.timeEnd('check')
@@ -3113,7 +3114,7 @@ var Runner = new Game()
       copyToClipboard(str)
       alert('The map has been copied on your clipboard');
   }
-  // div.appendChild(btnSave)
+  div.appendChild(btnSave)
   
   
   
