@@ -427,7 +427,7 @@
         Engine.insert(Player)
       }
   
-      const offMap   = 10,
+      const offMap   = 20,
             colStart = (Math.floor((tX / scale) * -1) - offMap > 0) ? Math.floor((tX / scale) * -1) - offMap : 0,
             rowStart = (Math.floor((tY / scale) * -1) - offMap > 0) ? Math.floor((tY / scale) * -1) - offMap : 0,
             colEnd   = ((Math.ceil(cWidth  / scale) + colStart)+offMap*2 > colMax  ) ? colMax : (Math.ceil(cWidth  / scale) + colStart)+offMap*2,
@@ -590,7 +590,7 @@
   
     start() {
       console.log('Start window Play')
-      this.list.forEach(evt => this.game.canvas.addEventListener(evt, this, false));
+      this.list.forEach(evt => document.addEventListener(evt, this, false));
   
       const divGame = document.getElementById('game'),
             menu    = gameMenu(this.game);
@@ -599,7 +599,7 @@
   
     end() {
       console.log('End window Play')
-      this.list.forEach(evt => this.game.canvas.removeEventListener(evt, this, false));
+      this.list.forEach(evt => document.removeEventListener(evt, this, false));
   
       const menu    = document.getElementById('playMenu'),
             style   = document.getElementById('stylePlay')
