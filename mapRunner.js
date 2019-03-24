@@ -566,7 +566,7 @@
       if (this.startTime === 0) time = 0
       const str = game.utils.getTime(time),
             timer = document.getElementById('timer');
-      if(timer) timer.innerHTML = str
+      if(timer) timer.innerHTML = `<span>${str}</span>`
     }
   
     start() {
@@ -2735,14 +2735,14 @@ var Runner = new Game()
     // DISPLAY TIME
     const timer = document.createElement('p')
     timer.id = "timer"
-    timer.innerHTML = "00:00:00"
+    timer.innerHTML = "<span>00:00:00<span>"
     gameDiv.appendChild(timer)
     setTimeout(() => {
       const width = timer.width,
             length  = canvas.width;
-      console.log(left)
-      timer.style.left = length - width/2
-    }, 500)
+      console.log(length)
+      timer.style.left = `${length - width/2}px !important`
+    }, 1000)
   
   
     // CONTAINER
