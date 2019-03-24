@@ -566,7 +566,8 @@
       if (this.startTime === 0) time = 0
       const str = game.utils.getTime(time),
             timer = document.getElementById('timer');
-      if(timer) timer.innerHTML = `<span>${str}</span>`
+      if(!timer) return
+      timer.children[0].innerHTML = str
     }
   
     start() {
@@ -2223,7 +2224,7 @@ function Game(M){
       // // 1000).toFixed(2)
       if(msA > 1000) msA = ((msA / 1000).toFixed(0)) //* 10
       else if(msA > 100) msA = ((msA / 1000).toFixed(2)) * 100
-  
+      else if (msA === 100) msA = 00
   
       var ms  = `${(msA < 10) ? '0' : ''}${Math.round(msA)}`
       var sec = `${(Math.floor(nb/1000%60) < 10) ? '0' : ''}${Math.floor(nb/1000%60)}`
@@ -2709,13 +2710,17 @@ var Runner = new Game()
         position: absolute;
         text-align: center;
         top: 0;
-        left: 50%;
-        padding: 10px 20px;
-        background: rgba(0,0,0,0.7);
+        width:100%;
+        padding: 10px 0;
         color: white;
-        font-size: 2.5em;
+        font-size: 2.3em;
         font-weight: bold;
         z-index: 1000;
+      }
+
+      #timer > span {
+        padding: 10px 20px;
+        background: rgba(0,0,0,0.7);
       }
     `
     head.appendChild(style);
@@ -2735,14 +2740,10 @@ var Runner = new Game()
     // DISPLAY TIME
     const timer = document.createElement('p')
     timer.id = "timer"
-    timer.innerHTML = "<span>00:00:00<span>"
+    const timerSpan = document.createElement('span')
+    timerSpan.innerHTML = "00:00:00"
+    timer.appendChild(timerSpan)
     gameDiv.appendChild(timer)
-    setTimeout(() => {
-      const width = timer.width,
-            length  = canvas.width;
-      console.log(length)
-      timer.style.left = `${length - width/2}px !important`
-    }, 1000)
   
   
     // CONTAINER
