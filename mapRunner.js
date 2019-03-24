@@ -564,28 +564,9 @@
           
       let  time = (this.endTime > 0) ? this.endTime : this.timer;
       if (this.startTime === 0) time = 0
-      c.font = `20pt Tahoma`;
       const str = game.utils.getTime(time),
-            size = game.utils.textSize(c, str);
-      
-      c.beginPath();
-      c.fillStyle = "black"
-      c.fillRect(
-        canvas.width/2 - rectWidth/2, 
-        0,
-        rectWidth, 
-        rectHeight
-      )
-      c.closePath();
-      
-      c.beginPath();
-      c.fillStyle = "white"
-      c.fillText(
-        str, 
-        canvas.width/2 - size[0]/2, 
-        size[1]+15,
-        )
-      c.closePath();
+            timer = document.getElementById('timer');
+      if(timer) timer.innerHTML = str
     }
   
     start() {
@@ -602,8 +583,10 @@
       this.list.forEach(evt => document.removeEventListener(evt, this, false));
   
       const menu    = document.getElementById('playMenu'),
-            style   = document.getElementById('stylePlay')
+            style   = document.getElementById('stylePlay'),
+            timer   = document.getElementById('timer');
       menu.parentNode.removeChild(menu)
+      timer.parentNode.removeChild(timer)
       style.parentNode.removeChild(style)
   
       this.resetTimer()
@@ -2719,6 +2702,21 @@ var Runner = new Game()
         color: white;
         margin: 0 auto 10px auto;
       }
+
+      #timer {
+        display: inline-block;
+        margin: 0;
+        position: absolute;
+        text-align: center;
+        top: 0;
+        left: 50%;
+        padding: 10px 20px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        font-size: 2.5em;
+        font-weight: bold;
+        z-index: 1000;
+      }
     `
     head.appendChild(style);
     style.type = 'text/css';
@@ -2729,7 +2727,22 @@ var Runner = new Game()
     } else {
       style.appendChild(document.createTextNode(css));
     }
-  
+
+
+    const gameDiv = document.getElementById('game'),
+          canvas = document.getElementById('canvas');
+
+    // DISPLAY TIME
+    const timer = document.createElement('p')
+    timer.id = "timer"
+    timer.innerHTML = "00:00:00"
+    gameDiv.appendChild(timer)
+    setTimeout(() => {
+      const width = timer.width,
+            length  = canvas.width;
+      console.log(left)
+      timer.style.left = length - width/2
+    }, 500)
   
   
     // CONTAINER
