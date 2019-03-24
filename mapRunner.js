@@ -275,8 +275,8 @@
         if(game.translate.x == tx && game.translate.y == ty) {
             Player.spawn()
         } else {
-          game.translate.x = game.utils.lerp(game.translate.x, tx, 0.1)
-          game.translate.y = game.utils.lerp(game.translate.y, ty, 0.1)
+          game.translate.x = game.utils.lerp(game.translate.x, tx, 0.2)
+          game.translate.y = game.utils.lerp(game.translate.y, ty, 0.2)
           this.x = game.translate.x
           this.y = game.translate.y
         }
@@ -711,7 +711,7 @@
   class EditWindow {
     constructor(game) {
       this.game = game
-      this.list =  ["mousedown", "mousemove", "mouseup", "wheel" , "mouseleave"] //, "keyup", "keydown" ("ontouchstart" in window) ? ["touchstart", "touchmove", "touchend"] :
+      this.list =  ["mousedown", "mousemove", "mouseup", "wheel" , "mouseleave", "keyup", "keydown"] //, "keyup", "keydown" ("ontouchstart" in window) ? ["touchstart", "touchmove", "touchend"] :
     }
   
     update() {
@@ -801,6 +801,32 @@
       if (typeof this[handler] === "function") {
         evt.preventDefault();
         return this[handler](evt);
+      }
+    }
+
+    onkeydown(e) {
+      const game = this.game
+      if(!game.playing[0]) return
+
+      if(e.keyCode === 70) {
+        game.mouse.middle = {
+          click: true,
+          x: game.mouse.x,
+          y: game.mouse.y
+        }
+      }
+    }
+
+    onkeyup(e) {
+      const game = this.game
+      if(!game.playing[0]) return
+
+      if(e.keyCode === 70) {
+        game.mouse.middle = {
+          click: false,
+          x: null,
+          y: null
+        }
       }
     }
   
