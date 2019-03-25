@@ -14,8 +14,9 @@ app.get('/', async (req, res) => {
   res.render('index.html')
 })
 
-app.post('/', (req, res) => {
-  console.log('post')
+app.post('/callMap', (req, res) => {
+  console.log('Calling Map', req)
+  res.send('test')
 })
 
 app.listen(3000, () => {
