@@ -2640,6 +2640,23 @@ function Game(M){
       if(game.resetAnimate) game.resetAnimate = false
       if(game.playing[0]) window.requestAnimationFrame(game.animate);
   }
+  
+  this.start = () => {
+    this.mode = 'play'
+    this.init()
+    this.playing = [true, true]
+    this.cfg.updateAll = true
+
+    this.resetAnimate = true
+    this.animate()
+    this.window.play.start()
+  }
+  
+  this.edit = () => {
+  
+  }
+  
+}
 
 
 
