@@ -41,7 +41,16 @@
   <div id="game">
       <canvas id="canvas" tabindex=1>You browser is too old to use canvas technologies.</canvas>
   </div>
-
+  
+  <button id="test">
+    
+  </button>
+  <scipt>
+    var request = new XMLHttpRequest();
+    request.open('POST', '/test', true);
+    request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+    request.send(data);
+  </scipt>
 
 <!-- <script type="text/javascript" src="./canvas.bundle.js"></script> -->
 <script type="text/javascript" src="./mapRunner.js"></script>
