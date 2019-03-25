@@ -4,8 +4,14 @@ const app = express()
 const assets = require('./assets')
 const mongoose = require('mongoose');
 
-mongoose.connect(process.env.DB);
+const MapSchema = new mongoose.Schema({
+  name: String,
+  author: String,
+  data: String,
+  
+});
 
+var Map = mongoose.model('Map', MapSchema);
 
 
 app.use('/img', assets)
@@ -19,12 +25,16 @@ app.get('/', async (req, res) => {
 
 app.post('/callMap', (req, res) => {
   
+  mongoose.connect(process.env.DB, { useNewUrlParser: true });
   const db = mongoose.connection;
   db.on('error', console.error.bind(console, 'connection error:'));
   db.once('open', function() {
     
-  console.log('Calling Map', req)
-  res.send('test')
+    Map.find({ name: "Default"}, (err, map) => {    
+      if (err) return console.error(err);
+      console.log(map);
+      res.send(map[0])
+    });
   });
 })
 
