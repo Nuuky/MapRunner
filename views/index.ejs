@@ -42,7 +42,11 @@
 <!--       <canvas id="canvas" tabindex=1>You browser is too old to use canvas technologies.</canvas> -->
   </div>
   <div id="mapList">
-    
+    <ul>
+    <% maps.forEach(map => { %>
+      <li><span class="mapName"><%= map.name %></span><span class="mapAuthor"><%= map.author %></span><span class="mapLength"><% console.log(map) %><%= map.width %>x<%= map.height %></span></li>
+    <% }) %>
+    </ul>
   </div>
   
   <button id="test">Test</button>

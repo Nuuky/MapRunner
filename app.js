@@ -33,11 +33,10 @@ app.use(express.static(path.join(__dirname)));
 app.set('view engine', 'ejs')
 
 app.get('/', async (req, res) => {
-    Map.findOne({ name: req.body.name, author: req.body.author }, (err, map) => {    
+    Map.find({}, (err, maps) => {    
       if (err) return console.error(err);
-      res.send(map.data)
+      res.render('index.ejs', {maps: maps})
     });
-  res.render('index.html')
 })
 
 app.post('/callMap', (req, res) => {
