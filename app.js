@@ -14,6 +14,10 @@ app.get('/', async (req, res) => {
   res.render('index.html')
 })
 
+app.post('/', (req, res) => {
+  console.log('post')
+})
+
 app.listen(3000, () => {
   console.log(`>> App running`)
 })
