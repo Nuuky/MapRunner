@@ -26,7 +26,7 @@ app.get('/', async (req, res) => {
   res.render('index.html')
 })
 
-app.post('/callMap', (req, res) => {  
+app.post('/callMap', (req, res) => {
   mongoose.connect(process.env.DB, { useNewUrlParser: true });
   const db = mongoose.connection;
   db.on('error', console.error.bind(console, 'connection error:'));
