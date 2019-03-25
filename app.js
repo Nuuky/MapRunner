@@ -2,6 +2,9 @@ const path = require('path')
 const express = require('express')
 const app = express()
 const assets = require('./assets')
+const mongoose = require('mongoose');
+
+mongoose.connect(process.env.DB);
 
 
 
@@ -15,8 +18,14 @@ app.get('/', async (req, res) => {
 })
 
 app.post('/callMap', (req, res) => {
+  
+  const db = mongoose.connection;
+  db.on('error', console.error.bind(console, 'connection error:'));
+  db.once('open', function() {
+    
   console.log('Calling Map', req)
   res.send('test')
+  });
 })
 
 app.listen(3000, () => {

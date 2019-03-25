@@ -9,7 +9,8 @@
   "dependencies": {
     "express": "^4.16.4",
     "ejs": "^2.6.1",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "mongoose": "^5.4.19"
   },
   "engines": {
     "node": "8.x"
