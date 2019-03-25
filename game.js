@@ -2613,6 +2613,8 @@ function Game(M){
 
   // Animation Loop
   let lastRender
+  
+  var reqAnim = null
 
   this.animate = function(time) {
       if(!time) time = 0
@@ -2638,7 +2640,7 @@ function Game(M){
       lastRender = time
 
       if(game.resetAnimate) game.resetAnimate = false
-      if(game.playing[0]) window.requestAnimationFrame(game.animate);
+      if(game.playing[0]) reqAnim = window.requestAnimationFrame(game.animate);
   }
   
   this.start = () => {
@@ -2646,14 +2648,29 @@ function Game(M){
     this.init()
     this.playing = [true, true]
     this.cfg.updateAll = true
-
     this.resetAnimate = true
-    this.animate()
+    
     this.window.play.start()
+    this.animate()
   }
   
   this.edit = () => {
+    this.mode = 'edit'
+    this.init()
+    this.playing = [true, true]
+    this.cfg.updateAll = true
+
+    this.window.edit.start()
+    this.animate()
+  }
   
+  this.end = () => {
+    this.playing = [false, false]
+    this.map = []
+    this.window[this.mode].end()
+    window.cancelAnimationFrame(reqAnim)
+    this.canvas.parentNode.removeChild(this.canvas)
+    delete this
   }
   
 }
