@@ -2640,7 +2640,6 @@ function Game(M){
       if(game.resetAnimate) game.resetAnimate = false
       if(game.playing[0]) window.requestAnimationFrame(game.animate);
   }
-}
 
 
 
@@ -2662,7 +2661,7 @@ function Game(M){
 
 //     Runner.resetAnimate = true
 //     Runner.animate()
-//     Runner.window[Runner.mode].start()
+//     Runner.window.play.start()
 //       btns.forEach(b => b.destroy())
 //   })
 
@@ -2716,6 +2715,7 @@ function Game(M){
         position: absolute;
         text-align: center;
         top: 0;
+        left: 0;
         width:100%;
         padding: 10px 0;
         color: white;
