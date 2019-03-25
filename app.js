@@ -5,6 +5,15 @@ const assets = require('./assets')
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
+
+
+mongoose.connect(process.env.DB, { useNewUrlParser: true });
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {
+  console.log('>> Connected to database')
+});
+
 const MapSchema = new mongoose.Schema({
   name: String,
   author: String,
@@ -27,16 +36,10 @@ app.get('/', async (req, res) => {
 })
 
 app.post('/callMap', (req, res) => {
-  mongoose.connect(process.env.DB, { useNewUrlParser: true });
-  const db = mongoose.connection;
-  db.on('error', console.error.bind(console, 'connection error:'));
-  db.once('open', function() {
-    
     Map.find({ name: req.body.name, author: req.body.author }, (err, map) => {    
       if (err) return console.error(err);
       res.send(map[0].data)
     });
-  });
 })
 
 app.listen(3000, () => {

@@ -2075,10 +2075,16 @@
 
 function Game(M){
 
-  var game = this
-
-  this.canvas = document.getElementById('canvas')
+  var game = this,
+      divGame = document.getElementById('game');
+  
+  this.canvas = document.createElement('canvas')
+  this.canvas.id = 'canvas'
+  this.canvas.tabindex = 1
+  this.canvas.innerHTML = "You browser is too old to use canvas technologies."
+  divGame.appendChild(this.canvas)
   this.c = this.canvas.getContext('2d');
+  
   
   this.canvas.oncontextmenu = e => e.preventDefault();
   this.canvas.width = innerWidth
@@ -2640,41 +2646,41 @@ function Game(M){
 
 
 
-var Runner = new Game()
+// var Runner = new Game()
 
 
 
 
-  // TempMenu
-  let btns = []
+//   // TempMenu
+//   let btns = []
           
-  const btn1 = new Button(Runner, Runner.canvas.width/2, Runner.canvas.height/2-40,     250, 80, 20, 'PLAY', 'test1', () => {
-    Runner.mode = 'play'
-    Runner.init()
-    Runner.playing = [true, true]
-    Runner.cfg.updateAll = true
+//   const btn1 = new Button(Runner, Runner.canvas.width/2, Runner.canvas.height/2-40,     250, 80, 20, 'PLAY', 'test1', () => {
+//     Runner.mode = 'play'
+//     Runner.init()
+//     Runner.playing = [true, true]
+//     Runner.cfg.updateAll = true
 
-    Runner.resetAnimate = true
-    Runner.animate()
-    Runner.window[Runner.mode].start()
-      btns.forEach(b => b.destroy())
-  })
+//     Runner.resetAnimate = true
+//     Runner.animate()
+//     Runner.window[Runner.mode].start()
+//       btns.forEach(b => b.destroy())
+//   })
 
 
-  const btn2 = new Button(Runner, Runner.canvas.width/2, btn1.getBottom()+20, 250, 80, 20, 'CUSTOM', 'test2', () => {
-    Runner.mode = 'edit'
-    Runner.init()
-      setTimeout(() => {
-        Runner.playing = [true, true]
-        Runner.cfg.updateAll = true
+//   const btn2 = new Button(Runner, Runner.canvas.width/2, btn1.getBottom()+20, 250, 80, 20, 'CUSTOM', 'test2', () => {
+//     Runner.mode = 'edit'
+//     Runner.init()
+//       setTimeout(() => {
+//         Runner.playing = [true, true]
+//         Runner.cfg.updateAll = true
 
-        Runner.window[Runner.mode].start()
+//         Runner.window[Runner.mode].start()
           
-        Runner.animate()
-          btns.forEach(b => b.destroy())
-      }, 200)
-  })
-  btns = [btn1, btn2]
+//         Runner.animate()
+//           btns.forEach(b => b.destroy())
+//       }, 200)
+//   })
+//   btns = [btn1, btn2]
 
 
   function gameMenu(game) {
