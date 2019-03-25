@@ -2665,11 +2665,13 @@ function Game(M){
   }
   
   this.end = () => {
-    this.playing = [false, false]
-    this.map = []
     this.window[this.mode].end()
     window.cancelAnimationFrame(reqAnim)
     this.canvas.parentNode.removeChild(this.canvas)
+    
+    for(el in this) {
+      delete this[el]
+    }
     delete this
   }
   

@@ -36,9 +36,9 @@ app.get('/', async (req, res) => {
 })
 
 app.post('/callMap', (req, res) => {
-    Map.find({ name: req.body.name, author: req.body.author }, (err, map) => {    
+    Map.findOne({ name: req.body.name, author: req.body.author }, (err, map) => {    
       if (err) return console.error(err);
-      res.send(map[0].data)
+      res.send(map.data)
     });
 })
 
