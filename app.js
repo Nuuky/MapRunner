@@ -3,6 +3,7 @@ const express = require('express')
 const app = express()
 const assets = require('./assets')
 const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 
 const MapSchema = new mongoose.Schema({
   name: String,
@@ -13,6 +14,8 @@ const MapSchema = new mongoose.Schema({
 
 var Map = mongoose.model('Map', MapSchema);
 
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/img', assets)
 app.use('/asset', express.static('asset'))
@@ -23,17 +26,15 @@ app.get('/', async (req, res) => {
   res.render('index.html')
 })
 
-app.post('/callMap', (req, res) => {
-  
+app.post('/callMap', (req, res) => {  
   mongoose.connect(process.env.DB, { useNewUrlParser: true });
   const db = mongoose.connection;
   db.on('error', console.error.bind(console, 'connection error:'));
   db.once('open', function() {
     
-    Map.find({ name: "Default"}, (err, map) => {    
+    Map.find({ name: req.body.name, author: req.body.author }, (err, map) => {    
       if (err) return console.error(err);
-      console.log(map);
-      res.send(map[0])
+      res.send(map[0].data)
     });
   });
 })
