@@ -2081,7 +2081,7 @@ function Game(M){
   this.canvas = document.createElement('canvas')
   this.canvas.id = 'canvas'
   this.canvas.tabindex = 1
-  this.canvas.innerHTML = "You browser is too old to use canvas technologies."
+  
   divGame.appendChild(this.canvas)
   this.c = this.canvas.getContext('2d');
   
@@ -2640,6 +2640,29 @@ function Game(M){
       if(game.resetAnimate) game.resetAnimate = false
       if(game.playing[0]) window.requestAnimationFrame(game.animate);
   }
+  
+  this.start = () => {
+    this.mode = 'play'
+    this.init()
+    this.playing = [true, true]
+    this.cfg.updateAll = true
+
+    this.resetAnimate = true
+    this.animate()
+    this.window.play.start()
+  }
+  
+  this.edit = () => {
+    this.mode = 'edit'
+    this.init()
+    
+    this.playing = [true, true]
+    this.cfg.updateAll = true
+
+
+    this.animate()
+    this.window.edit.start()
+}
 
 
 
