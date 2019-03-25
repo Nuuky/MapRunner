@@ -2639,7 +2639,7 @@ function Game(M){
       if(game.playing[0]) reqAnim = window.requestAnimationFrame(game.animate);
   }
   
-  this.start = () => {
+  this.play = () => {
     this.mode = 'play'
     this.init()
     this.playing = [true, true]
