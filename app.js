@@ -30,8 +30,13 @@ app.use('/img', assets)
 app.use('/asset', express.static('asset'))
 app.use(express.static(path.join(__dirname)));
 
+app.set('view engine', 'ejs')
 
 app.get('/', async (req, res) => {
+    Map.findOne({ name: req.body.name, author: req.body.author }, (err, map) => {    
+      if (err) return console.error(err);
+      res.send(map.data)
+    });
   res.render('index.html')
 })
 
