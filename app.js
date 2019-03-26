@@ -35,6 +35,7 @@ var Map = mongoose.model('Map', MapSchema);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(require('sanitize').middleware);
 
 app.use('/img', assets)
 app.use('/asset', express.static('asset'))
@@ -61,18 +62,24 @@ app.post('/callMap', (req, res) => {
 
 app.post('/saveMap', (req, res) => {
   if (!req.body.name) return
+  
+  var name = req.queryString('name')
+  var cols = req.queryInt('cols')
+  var rows = req.queryInt('rows')
+  var data = req.queryString('data')
+  
   Map.findOne({ name: req.body.name }, (err, map) => {
     if (err) return console.error(err);
     if (map) return console.log('[SAVE] Map already exist !')
     
-    console.log(`[SAVE] New map: ${req.body.name} - ${req.body.cols}x${req.body.rows}`)
+    console.log(`[SAVE] New map: ${name} - ${cols}x${rows}`)
 
     const newMap = new Map({
-      name: req.body.name,
-      cols: req.body.cols,
-      rows: req.body.rows,
+      name: name,
+      cols: cols,
+      rows: rows,
       time: null,
-      data: req.body.data
+      data: data
     })
 
   newMap.save(function (err, newMap) {
