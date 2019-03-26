@@ -403,8 +403,6 @@
       this.game.Player.hide = true
       console.log(getTime(this.endTime))
       
-      console.log(this.game.cfg)
-      
       if((this.game.cfg.time != null && this.endTime >= this.game.cfg.time) || this.game.cfg.edited) return
       
       var scoreReq = new XMLHttpRequest();
@@ -1955,8 +1953,6 @@ function Game(N, T, M){
     updateArr : [[], [], [], []],
     updateAll : false
   }
-  
-  console.log("TIME =", this.cfg.time)
 
 
   this.utils = {
@@ -3032,6 +3028,14 @@ function Game(N, T, M){
       
     if (!game.cfg.name) return errorMsg.innerHTML = `You forgot to set the name !`
   
+
+    const hasSpawn = typeExist('Spawn', game.static),
+          hasEnd   = typeExist('End',   game.static);
+
+    if (!hasSpawn || !hasEnd) {
+      return errorMsg.innerHTML = `You can't save without ${(!hasSpawn) ? 'Spawn' : 'End'} block !`
+    }
+      
     let str = ''
 
     var mapTest = game.static,

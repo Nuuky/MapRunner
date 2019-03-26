@@ -56,7 +56,7 @@ app.get('/', async (req, res) => {
 
 app.post('/callMap', (req, res) => {
   
-  var name = req.bodyString('name')
+  var name = req.sanitize(req.body.name);
   
   Map.findOne({ name: name }, (err, map) => {    
     if (err) return console.error(err);
@@ -64,6 +64,8 @@ app.post('/callMap', (req, res) => {
     res.send(JSON.stringify(map))
   });
 })
+
+
 
 app.post('/saveMap', (req, res) => {
   if (!req.body.name) return
