@@ -41,6 +41,6 @@ body {
     display: none;
 }
 
-#mapList .map:has(input[type="radio"]) {
+#mapList .map.selected {
     background: red;
 }

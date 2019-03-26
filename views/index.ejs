@@ -14,7 +14,7 @@
   <div id="mapList">
     <ul>
     <% maps.forEach((map, id) => { %>
-      <label class="map" for="map_<%= id %>" onclick="checkForClick()">
+      <label class="map" for="map_<%= id %>" onclick="checkForClick().bind(this)">
         <input type="radio" name="map" id="map_<%= id %>">
         <span class="mapName"><%= map.name %></span> 
         <span class="mapLength"><%= map.cols %>x<%= map.rows %></span> 
@@ -28,11 +28,11 @@
   
   
   <script type="text/javascript">
-    function checkForClick(e) {
-      var mapSelected = document.querySelector('#mapList .map:has(> h1)')
-      mapSelected.style.background = "red"
-      console.log("in")
-      
+    function checkForClick() {
+      console.log(this)
+      var oldSlected = document.querySelector('#mapList .map.selected')
+      if(oldSlected) oldSlected.classList.remove('selected')
+      this.classList.add('selected')
     }
   </script>
   
