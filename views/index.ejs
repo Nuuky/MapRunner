@@ -17,13 +17,15 @@
       <span class="size">Size</span> 
       <span class="score">Score</span>
     </p>
-    <% maps.forEach(map => { %>
-      <p class="map" onclick="checkForClick(this)">
-        <span class="name"><%= map.name %></span> 
-        <span class="size"><%= map.cols %>x<%= map.rows %></span> 
-        <span class="score"><%= map.time %></span>
-      </p><br>
-    <% }) %>
+    <div id="maps">
+      <% maps.forEach(map => { %>
+        <p class="map" onclick="checkForClick(this)">
+          <span class="name"><%= map.name %></span> 
+          <span class="size"><%= map.cols %>x<%= map.rows %></span> 
+          <span class="score"><%= map.time %></span>
+        </p>
+      <% }) %>
+    </div>
   </div>
   
   <button id="test">Test</button>
