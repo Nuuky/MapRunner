@@ -2672,7 +2672,6 @@ function Game(N, T, M){
     for(el in this) {
       delete this[el]
     }
-    delete this
     var divList = document.getElementById('mapList'),
         divGame = document.getElementById('game');
     divList.style.display = "block"
