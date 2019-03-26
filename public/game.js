@@ -2187,7 +2187,7 @@ function Game(N, T, M){
   
       layerName.forEach(name => {
         const layer = game[name]
-        if (!layer[y] || !layer[y][x] || !layer[y][x].collision) return false
+        if (!layer[y] || !layer[y][x] || !layer[y][x].collision || layer[y][x].type === "SwordSupport") return false
         toReturn = layer[y][x]
       })
   
