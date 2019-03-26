@@ -39,5 +39,5 @@
       req.onloadend = onLoadEnd;
       req.open('POST', '/callMap', true);
       req.setRequestHeader("Content-type", "application/json");
-      req.send(JSON.stringify({name: "Default", author: "Nuky"}));
+      req.send(JSON.stringify({name: "Default"}));
     })

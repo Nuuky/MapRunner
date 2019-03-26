@@ -39,6 +39,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/img', assets)
 app.use('/asset', express.static('asset'))
 app.use(express.static(path.join(__dirname)));
+app.use(express.static('public'))
 
 app.set('view engine', 'ejs')
 
@@ -50,7 +51,7 @@ app.get('/', async (req, res) => {
 })
 
 app.post('/callMap', (req, res) => {
-    Map.findOne({ name: req.body.name, author: req.body.author }, (err, map) => {    
+    Map.findOne({ name: req.body.name }, (err, map) => {    
       if (err) return console.error(err);
       res.send(map.data)
     });

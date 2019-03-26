@@ -16,9 +16,11 @@
     }
 
     #game {
-      position: relative;
+      position: absolute;
       width: max-content;
       height: max-content;
+      left:0;
+      top:0;
     }
 
     .block {
