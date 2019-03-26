@@ -551,7 +551,14 @@
     endTimer() {
       this.endTime = Date.now() - this.startTime
       this.game.Player.hide = true
-      console.log(this.game.utils.getTime(this.endTime))
+      console.log(getTime(this.endTime))
+      
+      if(this.endTime >= game.cfg.time || game.cfg.edited) return
+      
+      var scoreReq = new XMLHttpRequest();
+      scoreReq.open('POST', '/scoreMap', true);
+      scoreReq.setRequestHeader("Content-type", "application/json");
+      scoreReq.send(JSON.stringify({name: game.cfg.name, time: this.endTime}));
     }
   
   
@@ -564,7 +571,7 @@
           
       let  time = (this.endTime > 0) ? this.endTime : this.timer;
       if (this.startTime === 0) time = 0
-      const str = game.utils.getTime(time),
+      const str = getTime(time),
             timer = document.getElementById('timer');
       if(!timer) return
       timer.children[0].innerHTML = str
@@ -2073,7 +2080,7 @@
 
 
 
-function Game(M, N){
+function Game(N, T, M){
 
   var game = this,
       divGame = document.getElementById('game');
@@ -2093,6 +2100,8 @@ function Game(M, N){
   
   this.cfg = {
     name      : N || "",
+    time      : T || 0,
+    edited    : false,
     cols      : 32,
     rows      : 32,
     scale     : 64,
@@ -2833,6 +2842,7 @@ function Game(M, N){
       game.cfg.updateAll = true
       game.canvas.focus()
       game.animate()
+      game.cfg.edited = true
     }
     div.append(btnEdit)
   
