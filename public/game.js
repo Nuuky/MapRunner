@@ -431,7 +431,7 @@
   
     start() {
       console.log('Start window Play')
-      this.list.forEach(evt => document.addEventListener(evt, this, false));
+      this.list.forEach(evt => document.addEventListener(evt, this.handleEvent(evt), false));
   
       const divGame = document.getElementById('game'),
             menu    = gameMenu(this.game);
@@ -440,7 +440,7 @@
   
     end() {
       console.log('End window Play')
-      this.list.forEach(evt => document.removeEventListener(evt, this, false));
+      this.list.forEach(evt => document.removeEventListener(evt, this.handleEvent(evt), false));
   
       const menu    = document.getElementById('playMenu'),
             style   = document.getElementById('stylePlay'),
@@ -468,10 +468,11 @@
     }
       
     handleEvent(evt) {
-      let handler = `on${evt.type}`;
-      if (typeof this[handler] === "function") {
+      let handler = `on${evt.type}`,
+          self = this;
+      if (typeof self[handler] === "function") {
         evt.preventDefault();
-        return this[handler](evt);
+        return self[handler](evt);
       }
     }
     
@@ -625,13 +626,13 @@
             toolBar = toolbar(this.game)
       div.insertBefore(toolBar, this.game.canvas)
   
-      this.list.forEach(evt => this.game.canvas.addEventListener(evt, this, false));
+      this.list.forEach(evt => this.game.canvas.addEventListener(evt, this.handleEvent(evt), false));
     }
   
     end() {
       this.game.cfg.scale = 64
       console.log('End window Edit')
-      this.list.forEach(evt => this.game.canvas.removeEventListener(evt, this, false));
+      this.list.forEach(evt => this.game.canvas.removeEventListener(evt, this.handleEvent(evt), false));
       
       const elem = document.getElementById('toolbar'),
             style = document.getElementById('styleEdit')
@@ -784,17 +785,11 @@
     ontouchstart(e) {
       const game = this.game
       const touch = e.targetTouches.item(0);
-      if (touch) {
-        // game.startDrawingAt({x: touch.clientX, y: touch.clientY});
-      }
     }
   
     ontouchmove(e) {
       const game = this.game
       const touch = e.targetTouches.item(0);
-      if (touch) {
-        // game.continueDrawingTo({x: touch.clientX, y: touch.clientY});
-      }
     }
     
     ontouchend(e) {
