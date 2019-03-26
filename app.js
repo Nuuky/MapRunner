@@ -54,7 +54,7 @@ app.get('/', async (req, res) => {
 
 app.post('/callMap', (req, res) => {
   
-  var name = req.queryString('name')
+  var name = req.bodyString('name')
   
   Map.findOne({ name: name }, (err, map) => {    
     if (err) return console.error(err);
@@ -66,12 +66,12 @@ app.post('/callMap', (req, res) => {
 app.post('/saveMap', (req, res) => {
   if (!req.body.name) return
   
-  var name = req.queryString('name')
-  var cols = req.queryInt('cols')
-  var rows = req.queryInt('rows')
-  var data = req.queryPattern('data', /((#|[0-9]|[a-z]){4}-?,?)*/gi)
+  var name = req.bodyString('name')
+  var cols = req.bodyInt('cols')
+  var rows = req.bodyInt('rows')
+  var data = req.bodyPattern('data', /((#|[0-9]|[a-z]){4}-?,?)*/gi)
   
-  Map.findOne({ name: req.body.name }, (err, map) => {
+  Map.findOne({ name: name }, (err, map) => {
     if (err) return console.error(err);
     if (map) return console.log('[SAVE] Map already exist !')
     
@@ -92,10 +92,11 @@ app.post('/saveMap', (req, res) => {
 })
 
 app.post('/scoreMap', (req, res) => {
-  var name = req.queryString('name')
+  var name = req.bodyString('name')
+  var time = req.bodyInt('time')
   
-    Map.where({ name: req.body.name }).updateOne({ $set: { time: req.body.time }}).exec()
-    console.log(`[SCORE] New score for ${req.body.name}: ${getTime(req.body.time)}`)
+  Map.where({ name: name }).updateOne({ $set: { time: time }}).exec()
+  console.log(`[SCORE] New score for ${name}: ${getTime(time)}`)
 })
 
 app.listen(3000, () => {
