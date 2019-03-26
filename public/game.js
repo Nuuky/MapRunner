@@ -13,6 +13,7 @@
         this.cols = cols
         this.rows = rows
         this.cells = []
+        this.scale = scale
     }
 
     create(rows, cols, scale) {
@@ -176,56 +177,6 @@
         //     this.game.playing[0] = false
         // }
     }
-
-
-
-    
-    oldResolve(A, B) {
-        // console.log('in')
-        const   vX      = A.getHalfWidth(true)  - B.getHalfWidth(true),
-                vY      = A.getHalfHeight(true) - B.getHalfHeight(true),
-                ww2     = (A.w / 2) + (B.w / 2),
-                hh2     = (A.h / 2) + (B.h / 2),
-                sideA   = ['TOP', 'BOTTOM', 'LEFT', 'RIGHT', 'TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_LEFT', 'BOTTOM_RIGHT'],
-                sideB   = ['BOTTOM', 'TOP', 'RIGHT', 'LEFT', 'BOTTOM_RIGHT', 'BOTTOM_LEFT', 'TOP_RIGHT', 'TOP_LEFT'];
-            
-        let dId = "",
-            isNegative = (vX < 0 && vY < 0) ? true : false;
-
-    
-        if (Math.abs(vX) < ww2 && Math.abs(vY) < hh2) {
-            var oX = ww2 - Math.abs(vX),
-                oY = hh2 - Math.abs(vY);
-            
-            if (oX > oY) {
-                if (vY > 0) {
-                    dId = 0
-                } else {
-                    dId = 1
-                }
-            } 
-            
-            else if (oX < oY) {
-                if (vX > 0) {
-                    dId = 2
-                } else {
-                    dId = 3
-                }
-            }
-
-            else {
-                if      (!isNegative && vX === vY) dId = 0
-                else if (!isNegative && vX  <  vY) dId = 0 
-                else if (!isNegative && vX  >  vY) dId = 1
-                else if ( isNegative && vX === vY) dId = 1
-            }
-        }
-
-        // console.log(this.cells)
-
-        A.resolve(B, sideA[dId])
-        B.resolve(A, sideB[dId])
-    }
   }
   class Camera {
 
@@ -286,108 +237,6 @@
       this.oldY = this.y
     }
   }
-  class Button {
-    constructor(game, x, y, w, h, fontSize, str, eventName, callback, autoDestroy = false) {
-      this.x = x
-      this.y = y
-      this.halfX = x
-      this.halfY = y
-      this.fontSize = fontSize
-      this.str = str
-      this.game = game
-      this.w = w
-      this.h = h
-      this.offX = 0
-      this.offY = 0
-      this.backColor = 'black'
-      this.fontColor = 'white'
-      this.cb = callback
-      this.autoDestroy = autoDestroy
-  
-      
-  
-      this.onOver = (e) => {
-        if(this.game.utils.mouseCollision(this, {x: e.clientX, y: e.clientY})) {
-          this.backColor = 'brown'
-          this.draw()
-        } else {
-          this.backColor = 'black'
-          this.draw()
-        }
-      }
-  
-      this.click = (e) => {
-        if(!this.game.utils.mouseCollision(this, {x: e.clientX, y: e.clientY})) return
-        this.cb()
-        if(autoDestroy) this.destroy()
-      }
-  
-      document.addEventListener('mousemove', this.onOver)
-  
-      document.addEventListener('click', this.click)
-  
-      this.draw()
-    }
-  
-    draw() {
-      const game    = this.game,
-            canvas  = game.canvas,
-            c       = game.c;
-      
-      c.font = `${this.fontSize}pt Tahoma`;
-      const size = game.utils.textSize(c, this.str)
-      this.offX = (this.w - size[0])
-      this.offY = (this.h - size[1])
-      this.x = this.halfX - ((size[0] + this.offX) / 2)
-      this.y = this.halfY - ((size[1] + this.offY) / 2)
-      
-      c.beginPath();
-      c.fillStyle = this.backColor
-      c.strokeStyle = this.fontColor
-      c.lineWidth = 3    
-      c.rect(
-        this.x, 
-        this.y,
-        size[0] + this.offX, 
-        size[1] + this.offY
-      )
-      c.fill()
-      c.stroke()
-      c.closePath();
-      
-      c.beginPath();
-      c.fillStyle = this.fontColor
-      c.fillText(
-        this.str, 
-        this.halfX - size[0] / 2,
-        this.halfY + size[1] / 2
-        )
-      c.closePath();
-    }
-  
-    getLeft() {
-      return this.halfX
-    }
-  
-    getTop() {
-      return this.halfY
-    }
-  
-    getRight() {
-      return this.getLeft() + this.w
-    }
-  
-    getBottom() {
-      return this.getTop() + this.h
-    }
-  
-    destroy() {
-      document.removeEventListener('mousemove', this.onOver)
-      document.removeEventListener('click', this.click)
-    }
-  
-    // canvas.on('handleClick', function(e, mouse)
-  }
   class PlayWindow {
     constructor(game) {
       this.game = game
@@ -397,6 +246,7 @@
       this.endTime = 0
       this.pauseStart = 0
       this.timer = 0
+      this.dt = 0
     }
   
     update(dt) {
