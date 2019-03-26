@@ -431,7 +431,7 @@
   
     start() {
       console.log('Start window Play')
-      this.list.forEach(evt => document.addEventListener(evt, this.handleEvent(evt), false));
+      this.list.forEach(evt => document.addEventListener(evt, this, false));
   
       const divGame = document.getElementById('game'),
             menu    = gameMenu(this.game);
@@ -440,7 +440,7 @@
   
     end() {
       console.log('End window Play')
-      this.list.forEach(evt => document.removeEventListener(evt, this.handleEvent(evt), false));
+      this.list.forEach(evt => document.removeEventListener(evt, this, false));
   
       const menu    = document.getElementById('playMenu'),
             style   = document.getElementById('stylePlay'),
@@ -468,11 +468,10 @@
     }
       
     handleEvent(evt) {
-      let handler = `on${evt.type}`,
-          self = this;
-      if (typeof self[handler] === "function") {
+      let handler = `on${evt.type}`;
+      if (typeof this[handler] === "function") {
         evt.preventDefault();
-        return self[handler](evt);
+        return this[handler](evt);
       }
     }
     
@@ -626,13 +625,13 @@
             toolBar = toolbar(this.game)
       div.insertBefore(toolBar, this.game.canvas)
   
-      this.list.forEach(evt => this.game.canvas.addEventListener(evt, this.handleEvent(evt), false));
+      this.list.forEach(evt => this.game.canvas.addEventListener(evt, this, false));
     }
   
     end() {
       this.game.cfg.scale = 64
       console.log('End window Edit')
-      this.list.forEach(evt => this.game.canvas.removeEventListener(evt, this.handleEvent(evt), false));
+      this.list.forEach(evt => this.game.canvas.removeEventListener(evt, this, false));
       
       const elem = document.getElementById('toolbar'),
             style = document.getElementById('styleEdit')
