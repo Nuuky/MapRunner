@@ -78,12 +78,11 @@ body {
   color: white;
   border: 1px solid white;
   font-weight: bold;
+  margin: auto;
 }
 
 #mapList > #btns > input[type="button"]:hover {
-  background: white;
-  color: #111;
-  border-color: #111;
+  background: brown;
   cursor: pointer;
   
 }

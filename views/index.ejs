@@ -27,8 +27,8 @@
       <% }) %>
     </div>
     <div id="btns" class="offList">
-      <input type="button" value="CREATE">
-      <input type="button" value="PLAY">
+      <input id="btnEdit" type="button" value="CREATE" disabled >
+      <input id="btnPlay" type="button" value="PLAY">
     </div>
   </div>
   
@@ -38,7 +38,9 @@
   <script type="text/javascript">
     function checkForClick(el) {
       console.log(this)
-      var oldSlected = document.querySelector('#mapList .map.selected')
+      var oldSlected = document.querySelector('#mapList .map.selected'),
+          btnPlay    = document.getElementById('#btnPlay');
+      if(btnPlay.disabled) btnPlay.disabled = false
       if(oldSlected) oldSlected.classList.remove('selected')
       el.classList.add('selected')
     }
