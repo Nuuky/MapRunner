@@ -553,7 +553,9 @@
       this.game.Player.hide = true
       console.log(getTime(this.endTime))
       
-      if(this.endTime >= this.game.cfg.time || this.game.cfg.edited) return
+      console.log(this.game.cfg)
+      
+      if((this.game.cfg.time != null && this.endTime >= this.game.cfg.time) || this.game.cfg.edited) return
       
       var scoreReq = new XMLHttpRequest();
       scoreReq.open('POST', '/scoreMap', true);
@@ -2100,7 +2102,7 @@ function Game(N, T, M){
   
   this.cfg = {
     name      : N || "",
-    time      : T || 0,
+    time      : T || null,
     edited    : false,
     cols      : 32,
     rows      : 32,

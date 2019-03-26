@@ -78,10 +78,30 @@ app.post('/saveMap', (req, res) => {
 })
 
 app.post('/scoreMap', (req, res) => {
-    Map.where({ name: req.body.name }).update({ $set: { time: req.body.time }})
+    Map.where({ name: req.body.name }).updateOne({ $set: { time: req.body.time }}).exec()
     console.log(`[SCORE] New score for ${req.body.name}: ${getTime(req.body.time)}`)
 })
 
 app.listen(3000, () => {
   console.log(`>> App running`)
 })
+
+
+function getTime(nb) {
+  nb = Number(nb)
+
+  if(nb === 0) return '00:00:00'
+
+
+  var msA = `${Math.floor(nb%1000)}`
+
+  // // 1000).toFixed(2)
+  if(msA > 1000) msA = ((msA / 1000).toFixed(0)) //* 10
+  else if(msA > 100) msA = ((msA / 1000).toFixed(2)) * 100
+  else if (msA === 100) msA = 00
+
+  var ms  = `${(msA < 10) ? '0' : ''}${Math.round(msA)}`
+  var sec = `${(Math.floor(nb/1000%60) < 10) ? '0' : ''}${Math.floor(nb/1000%60)}`
+  var min = `${(Math.floor(nb/1000/60) < 10) ? '0' : ''}${Math.floor(nb/1000/60)}`
+  return min + ':' + sec + ':' + ms
+}
