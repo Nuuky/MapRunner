@@ -54,12 +54,6 @@ app.get('/', async (req, res) => {
   console.log("[JOIN] New player")
 })
 
-app.get('/test', (req, res) => {
-  req.body.data = "#0123"
-  //var data = req.bodyPattern('data', /((#|[0-9]|[a-z]){4}-?,?)*/gi)
-  console.log(req.bodyPattern('data', /[0-9]/))
-})
-
 app.post('/callMap', (req, res) => {
   
   var name = req.bodyString('name')
@@ -74,23 +68,24 @@ app.post('/callMap', (req, res) => {
 app.post('/saveMap', (req, res) => {
   if (!req.body.name) return
   
-  var name = req.bodyString('name')
-  var cols = req.bodyInt('cols')
-  var rows = req.bodyInt('rows')
-  var data = req.bodyPattern('data', /((#|[0-9]|[a-z]){4}-?,?)*/gi)
+  var name = req.sanitize(req.body.name);
+  var cols = (typeof req.body.cols === 'number' && req.body.cols > 0) ? true : false
+  var rows = (typeof req.body.rows === 'number' && req.body.rows > 0) ? true : false
+  var data = (req.body.data.match(/((#|[0-9]|[a-z]){4}-?,?)*/gi).length <= 2) ? true : false
+  if(!cols || !rows || !data) return console.error(`[SAVE] Something wrong with data set: \n${req.body}`)
   
   Map.findOne({ name: name }, (err, map) => {
     if (err) return console.error(err);
     if (map) return console.log('[SAVE] Map already exist !')
     
-    console.log(`[SAVE] New map: ${name} - ${cols}x${rows}`)
+    console.log(`[SAVE] New map: ${name} - ${req.body.cols}x${req.body.rows}`)
 
     const newMap = new Map({
       name: name,
-      cols: cols,
-      rows: rows,
+      cols: req.body.cols,
+      rows: req.body.rows,
       time: null,
-      data: data
+      data: req.body.data
     })
 
   newMap.save(function (err, newMap) {
@@ -99,12 +94,15 @@ app.post('/saveMap', (req, res) => {
 });
 })
 
+
+
 app.post('/scoreMap', (req, res) => {
-  var name = req.bodyString('name')
-  var time = req.bodyInt('time')
+  var name = req.sanitize(req.body.name);
+  var time = (typeof req.body.time === 'number' && time > 0) ? true : false
+  if(!time) return console.log(`[SCORE] Something wrong with time: \n${req.body.time}`)
   
-  Map.where({ name: name }).updateOne({ $set: { time: time }}).exec()
-  console.log(`[SCORE] New score for ${name}: ${getTime(time)}`)
+  Map.where({ name: name }).updateOne({ $set: { time: req.body.time }}).exec()
+  console.log(`[SCORE] New score for ${name}: ${getTime(req.body.time)}`)
 })
 
 app.listen(3000, () => {
