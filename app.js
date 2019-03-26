@@ -53,6 +53,7 @@ app.get('/', async (req, res) => {
 app.post('/callMap', (req, res) => {
     Map.findOne({ name: req.body.name }, (err, map) => {    
       if (err) return console.error(err);
+      console.log(`[PLAY] ${map.name} has been called !`)
       res.send(JSON.stringify(map))
     });
 })
@@ -60,7 +61,7 @@ app.post('/callMap', (req, res) => {
 app.post('/saveMap', (req, res) => {
     Map.findOne({ name: req.body.name }, (err, map) => {
       if (err) return console.error(err);
-      if (map) return console.log('Map already exist !')
+      if (map) return console.log('[SAVE] Map already exist !')
       
       const newMap = new Map({
         name: req.body.name,
@@ -77,22 +78,8 @@ app.post('/saveMap', (req, res) => {
 })
 
 app.post('/scoreMap', (req, res) => {
-    Map.findOne({ name: req.body.name }, (err, map) => {
-      if (err) return console.error(err);
-      if (map) return console.log('Map already exist !')
-      
-      const newMap = new Map({
-        name: req.body.name,
-        cols: req.body.cols,
-        rows: req.body.rows,
-        time: 0,
-        data: req.body.data
-      })
-            
-    newMap.save(function (err, newMap) {
-    if (err) return console.error(err);
-    });
-  });
+    Map.where({ name: req.body.name }).update({ $set: { time: req.body.time }})
+    console.log(`[SCORE] New score for ${req.body.name}: ${getTime(req.body.time)}`)
 })
 
 app.listen(3000, () => {

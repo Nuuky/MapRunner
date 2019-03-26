@@ -553,12 +553,12 @@
       this.game.Player.hide = true
       console.log(getTime(this.endTime))
       
-      if(this.endTime >= game.cfg.time || game.cfg.edited) return
+      if(this.endTime >= this.game.cfg.time || this.game.cfg.edited) return
       
       var scoreReq = new XMLHttpRequest();
       scoreReq.open('POST', '/scoreMap', true);
       scoreReq.setRequestHeader("Content-type", "application/json");
-      scoreReq.send(JSON.stringify({name: game.cfg.name, time: this.endTime}));
+      scoreReq.send(JSON.stringify({name: this.game.cfg.name, time: this.endTime}));
     }
   
   
@@ -2109,6 +2109,8 @@ function Game(N, T, M){
     updateArr : [[], [], [], []],
     updateAll : false
   }
+  
+  console.log("TIME =", this.cfg.time)
 
 
   this.utils = {
