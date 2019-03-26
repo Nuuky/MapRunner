@@ -3192,33 +3192,38 @@ function Game(M, N){
     btnSave.onclick = (e) => {
       // e.preventDefault();
   
-      let str = ''
-      
-      const mapTest = game.static;
-  
-      for(let row = 0; row < mapTest.length; row++) {
-        for(let col = 0; col < mapTest[0].length; col++) {
-          layerName.forEach((name, id) => {
-            const layer = game[name]
-            if(!layer[row][col]) str += '#'
-            else str += layer[row][col].id
-          })
-  
-          str += (col+1 < mapTest[0].length) ? '-' : ''
-        }
-  
-        str += (row+1 < mapTest.length) ? ',' : ''
+    let str = ''
+
+    var mapTest = game.static,
+        cols    = mapTest[0].length,
+        rows    = mapTest.length;
+
+    for(let row = 0; row < mapTest.length; row++) {
+      for(let col = 0; col < mapTest[0].length; col++) {
+        layerName.forEach((name, id) => {
+          const layer = game[name]
+          if(!layer[row][col]) str += '#'
+          else str += layer[row][col].id
+        })
+
+        str += (col+1 < mapTest[0].length) ? '-' : ''
       }
-      
-      
-      layerName.forEach(name => {
-        const layer = game[name]
-  
-  
-      })
-      
-      copyToClipboard(str)
-      alert('The map has been copied on your clipboard');
+
+      str += (row+1 < mapTest.length) ? ',' : ''
+    }
+
+
+
+    var saveReq = new XMLHttpRequest();
+    saveReq.onloadend = () => {
+      return
+    };
+    saveReq.open('POST', '/saveMap', true);
+    saveReq.setRequestHeader("Content-type", "application/json");
+    saveReq.send(JSON.stringify({name: game.cfg.name, cols: cols, rows: rows, data: str}));
+
+      // copyToClipboard(str)
+      // alert('The map has been copied on your clipboard');
   }
   div.appendChild(btnSave)
   

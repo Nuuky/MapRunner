@@ -57,6 +57,15 @@ app.post('/callMap', (req, res) => {
     });
 })
 
+app.post('/saveMap', (req, res) => {
+    Map.findOne({ name: req.body.name }, (err, map) => {    
+      if (err) return console.error(err);
+      if (map) return console.log('Map already exist !')
+      
+      Map
+    });
+})
+
 app.listen(3000, () => {
   console.log(`>> App running`)
 })
