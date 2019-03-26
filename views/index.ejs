@@ -12,18 +12,17 @@
 <!--       <canvas id="canvas" tabindex=1>You browser is too old to use canvas technologies.</canvas> -->
   </div>
   <div id="mapList">
-    <p>
-      <span class="mapName"><%= map.name %></span> 
-      <span class="mapLength"><%= map.cols %>x<%= map.rows %></span> 
-      <span class="mapAuthor"><%= map.time %></span>
+    <p id="mapTitle">
+      <span class="name">Name</span> 
+      <span class="size">Size</span> 
+      <span class="score">Score</span>
     </p>
-    <% maps.forEach((map, id) => { %>
-      <label class="map" for="map_<%= id %>" onclick="checkForClick(this)">
-        <input type="radio" name="map" id="map_<%= id %>">
-        <span class="mapName"><%= map.name %></span> 
-        <span class="mapLength"><%= map.cols %>x<%= map.rows %></span> 
-        <span class="mapAuthor"><%= map.time %></span>
-      </label><br>
+    <% maps.forEach(map => { %>
+      <p class="map" onclick="checkForClick(this)">
+        <span class="name"><%= map.name %></span> 
+        <span class="size"><%= map.cols %>x<%= map.rows %></span> 
+        <span class="score"><%= map.time %></span>
+      </p><br>
     <% }) %>
   </div>
   

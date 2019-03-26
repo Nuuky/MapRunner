@@ -5,6 +5,7 @@ body {
     color: white;
     font-family: Arial;
     overflow: hidden;
+  background: #111115;
 }
 
 #canvas {
@@ -29,12 +30,24 @@ body {
 }
 
 #mapList {
-  position: absolute;;
-  left:0;
-  top:0;
-  width: 100vw;
-  height:100vh;
-  background: #111115;
+  display: block;
+  position: relative;
+  width: 500px;
+  height: max-content;
+  border: 1px solid white;
+  margin: auto;
+  margin-top: 200px;
+}
+
+#mapList > p {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    margin: auto;
+}
+
+#mapList > p#mapTitle {
+  background: #222225
 }
 
 #mapList .map input {
