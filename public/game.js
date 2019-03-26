@@ -2073,7 +2073,7 @@
 
 
 
-function Game(M){
+function Game(M, N){
 
   var game = this,
       divGame = document.getElementById('game');
@@ -2092,7 +2092,7 @@ function Game(M){
 
   
   this.cfg = {
-    name      : "default",
+    name      : N || "",
     cols      : 32,
     rows      : 32,
     scale     : 64,
@@ -2644,6 +2644,7 @@ function Game(M){
         divGame = document.getElementById('game');
     divList.style.display = "none"
     divGame.style.display = "block"
+    
     this.mode = 'play'
     this.init()
     this.playing = [true, true]
@@ -2655,6 +2656,11 @@ function Game(M){
   }
   
   this.edit = () => {
+    var divList = document.getElementById('mapList'),
+        divGame = document.getElementById('game');
+    divList.style.display = "none"
+    divGame.style.display = "block"
+    
     this.mode = 'edit'
     this.init()
     this.playing = [true, true]
@@ -2955,6 +2961,23 @@ function Game(M){
     h2.innerHTML = "SETTINGS:"
     h2.id = 'playH2'
     div.appendChild(h2)
+    
+    
+    // INPUT NAME
+    const nameSpan       = document.createElement('span')
+    nameSpan.innerHTML   = 'Name: '
+    nameSpan.classList.add('dispBlock', 'inputSpan')
+    const inputName     = document.createElement('input')
+    inputName.type      = 'text'
+    inputName.value     = game.cfg.name
+    
+    inputName.onchange  = function(e) {
+      game.cfg.name = e.target.value;
+    }
+    
+    
+    nameSpan.appendChild(inputName)
+    div.appendChild(nameSpan)
   
   
     const layerName = ['background', 'static', 'dynamic', 'foreground']

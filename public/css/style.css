@@ -67,7 +67,6 @@ body {
 #mapList > #btns {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  grid-gap: 50%;
 }
 
 #mapList > #btns > input[type="button"] {
