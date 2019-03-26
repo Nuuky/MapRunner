@@ -2889,7 +2889,7 @@ function Game(M){
       }
   
       .inputSpan > input {
-        width: 10%;
+        width: 15%;
       }
   
       #selectSpan > * {

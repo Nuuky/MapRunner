@@ -1,0 +1,30 @@
+
+    body {
+        margin: 0;
+        box-sizing: border-box;
+        color: white;
+        font-family: Arial;
+        overflow: hidden;
+    }
+
+    #canvas {
+      background: #111115;
+    }
+
+    #canvas:focus {
+      outline: none;
+    }
+
+    #game {
+      position: relative;
+      width: max-content;
+      height: max-content;
+    }
+
+    .block {
+      display: block;
+    }
+    
+    #mapList {
+      background: #111115;
+    }
