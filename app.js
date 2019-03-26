@@ -59,22 +59,25 @@ app.post('/callMap', (req, res) => {
 })
 
 app.post('/saveMap', (req, res) => {
-    Map.findOne({ name: req.body.name }, (err, map) => {
-      if (err) return console.error(err);
-      if (map) return console.log('[SAVE] Map already exist !')
-      
-      const newMap = new Map({
-        name: req.body.name,
-        cols: req.body.cols,
-        rows: req.body.rows,
-        time: 0,
-        data: req.body.data
-      })
-            
-    newMap.save(function (err, newMap) {
+  if (!req.body.name) return
+  Map.findOne({ name: req.body.name }, (err, map) => {
     if (err) return console.error(err);
-    });
+    if (map) return console.log('[SAVE] Map already exist !')
+    
+    console.log(`[SAVE] New map: ${req.body.name} - ${req.body.cols}x${req.body.rows}`)
+
+    const newMap = new Map({
+      name: req.body.name,
+      cols: req.body.cols,
+      rows: req.body.rows,
+      time: null,
+      data: req.body.data
+    })
+
+  newMap.save(function (err, newMap) {
+  if (err) return console.error(err);
   });
+});
 })
 
 app.post('/scoreMap', (req, res) => {

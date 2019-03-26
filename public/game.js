@@ -3186,6 +3186,8 @@ function Game(N, T, M){
     btnSave.classList.add('playBtn')
     btnSave.onclick = (e) => {
       // e.preventDefault();
+      
+    if (!game.cfg.name) return errorMsg.innerHTML = `You forgot to set the name !`
   
     let str = ''
 
