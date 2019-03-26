@@ -12,7 +12,8 @@
     "path": "^0.12.7",
     "mongoose": "^5.4.19",
     "body-parser": "^1.18.3",
-    "sanitize": "^2.1.0"
+    "sanitize": "^2.1.0",
+    "express-sanitizer": "^1.0.5"
   },
   "engines": {
     "node": "8.x"

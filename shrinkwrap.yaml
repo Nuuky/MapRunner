@@ -2,6 +2,7 @@ dependencies:
   body-parser: 1.18.3
   ejs: 2.6.1
   express: 4.16.4
+  express-sanitizer: 1.0.5
   mongoose: 5.4.19
   path: 0.12.7
   sanitize: 2.1.0
@@ -128,6 +129,13 @@ packages:
       node: '>= 0.6'
     resolution:
       integrity: sha1-Qa4u62XvpiJorr/qg6x9eSmbCIc=
+  /express-sanitizer/1.0.5:
+    dependencies:
+      sanitizer: 0.1.3
+      underscore: 1.8.3
+    dev: false
+    resolution:
+      integrity: sha512-48/Tf1DZ7JklRVTcXQLHAxhq4GNJTuHq2jjIYhyTmu0Bw+X06YPDD/e/tdn1QLYk706xw4N8JFxtjslRrDGb8g==
   /express/4.16.4:
     dependencies:
       accepts: 1.3.5
@@ -439,6 +447,10 @@ packages:
     dev: false
     resolution:
       integrity: sha512-HLDVriFJnrm6ElDe2E8alAKDMZGMtM8CdKhvunp9592j8hNwZmmsmhk/t6WZbWonKJsHK0OoxH5S1Yoie4sSpw==
+  /sanitizer/0.1.3:
+    dev: false
+    resolution:
+      integrity: sha1-1PCvdHXZp7ryqeWmEXGLqheKOeE=
   /saslprep/1.0.2:
     dependencies:
       sparse-bitfield: 3.0.3
@@ -520,6 +532,10 @@ packages:
       node: '>= 0.6'
     resolution:
       integrity: sha512-HRkVv/5qY2G6I8iab9cI7v1bOIdhm94dVjQCPFElW9W+3GeDOSHmy2EBYe4VTApuzolPcmgFTN3ftVJRKR2J9Q==
+  /underscore/1.8.3:
+    dev: false
+    resolution:
+      integrity: sha1-Tz+1OxBuYJf8+ctBCfKl6b36UCI=
   /unpipe/1.0.0:
     dev: false
     engines:
@@ -557,6 +573,7 @@ specifiers:
   body-parser: ^1.18.3
   ejs: ^2.6.1
   express: ^4.16.4
+  express-sanitizer: ^1.0.5
   mongoose: ^5.4.19
   path: ^0.12.7
   sanitize: ^2.1.0

@@ -4,6 +4,7 @@ const app = express()
 const assets = require('./assets')
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const expressSanitizer = require('express-sanitizer');
 
 
 
@@ -35,7 +36,8 @@ var Map = mongoose.model('Map', MapSchema);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(require('sanitize').middleware);
+
+app.use(expressSanitizer());
 
 app.use('/img', assets)
 app.use('/asset', express.static('asset'))
