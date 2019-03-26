@@ -53,11 +53,14 @@ app.get('/', async (req, res) => {
 })
 
 app.post('/callMap', (req, res) => {
-    Map.findOne({ name: req.body.name }, (err, map) => {    
-      if (err) return console.error(err);
-      console.log(`[PLAY] ${map.name} has been called !`)
-      res.send(JSON.stringify(map))
-    });
+  
+  var name = req.queryString('name')
+  
+  Map.findOne({ name: name }, (err, map) => {    
+    if (err) return console.error(err);
+    console.log(`[PLAY] ${map.name} has been called !`)
+    res.send(JSON.stringify(map))
+  });
 })
 
 app.post('/saveMap', (req, res) => {
@@ -66,7 +69,7 @@ app.post('/saveMap', (req, res) => {
   var name = req.queryString('name')
   var cols = req.queryInt('cols')
   var rows = req.queryInt('rows')
-  var data = req.queryString('data')
+  var data = req.queryPattern('data', /((#|[0-9]|[a-z]){4}-?,?)*/gi)
   
   Map.findOne({ name: req.body.name }, (err, map) => {
     if (err) return console.error(err);
@@ -89,6 +92,8 @@ app.post('/saveMap', (req, res) => {
 })
 
 app.post('/scoreMap', (req, res) => {
+  var name = req.queryString('name')
+  
     Map.where({ name: req.body.name }).updateOne({ $set: { time: req.body.time }}).exec()
     console.log(`[SCORE] New score for ${req.body.name}: ${getTime(req.body.time)}`)
 })
