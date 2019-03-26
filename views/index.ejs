@@ -27,27 +27,15 @@
       <% }) %>
     </div>
     <div id="btns" class="offList">
-      <input id="btnEdit" type="button" value="CREATE" disabled >
-      <input id="btnPlay" type="button" value="PLAY">
+      <input id="btnCreate" type="button" value="CREATE" >
+      <input id="btnPlay" type="button" value="PLAY" disabled>
     </div>
   </div>
   
-  <button id="test">Test</button>
   
-  
-  <script type="text/javascript">
-    function checkForClick(el) {
-      console.log(this)
-      var oldSlected = document.querySelector('#mapList .map.selected'),
-          btnPlay    = document.getElementById('#btnPlay');
-      if(btnPlay.disabled) btnPlay.disabled = false
-      if(oldSlected) oldSlected.classList.remove('selected')
-      el.classList.add('selected')
-    }
-  </script>
-  
-  <script type="text/javascript" src="./map/load.js"></script>
   <script type="text/javascript" src="./game.js"></script>
+  <script type="text/javascript" src="./functions.js"></script>
+  <script type="text/javascript" src="./map/load.js"></script>
   <script type="text/javascript" src="./map/save.js"></script>
   </body>
 </html>
