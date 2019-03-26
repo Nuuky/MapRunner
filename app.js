@@ -48,6 +48,7 @@ app.get('/', async (req, res) => {
       if (err) return console.error(err);
       res.render('index.ejs', {maps: maps})
     });
+  console.log("[JOIN] New player")
 })
 
 app.post('/callMap', (req, res) => {
