@@ -1,32 +1,46 @@
 
-    body {
-        margin: 0;
-        box-sizing: border-box;
-        color: white;
-        font-family: Arial;
-        overflow: hidden;
-    }
+body {
+    margin: 0;
+    box-sizing: border-box;
+    color: white;
+    font-family: Arial;
+    overflow: hidden;
+}
 
-    #canvas {
-      background: #111115;
-    }
+#canvas {
+  background: #111115;
+}
 
-    #canvas:focus {
-      outline: none;
-    }
+#canvas:focus {
+  outline: none;
+}
 
-    #game {
-      position: absolute;
-      width: max-content;
-      height: max-content;
-      left:0;
-      top:0;
-    }
+#game {
+  position: absolute;;
+  left:0;
+  top:0;
+  width: max-content;
+  height: max-content;
+  display:none;
+}
 
-    .block {
-      display: block;
-    }
-    
-    #mapList {
-      background: #111115;
-    }
+.block {
+  display: block;
+}
+
+#mapList {
+  position: absolute;;
+  left:0;
+  top:0;
+  width: 100vw;
+  height:100vh;
+  background: #111115;
+}
+
+#mapList .map input {
+    display: none;
+}
+
+#mapList .map:has(> input:checked) {
+    background: red;
+}

@@ -14,11 +14,11 @@
   <div id="mapList">
     <ul>
     <% maps.forEach((map, id) => { %>
-      <input type="radio" name="map" id="<%= id %>">
-        <label class="map" for="<%= id %>">
-          <span class="mapName"><%= map.name %></span> 
-          <span class="mapLength"><%= map.cols %>x<%= map.rows %></span> 
-          <span class="mapAuthor"><%= map.time %></span>
+      <label class="map" for="map_<%= id %>">
+        <input type="radio" name="map" id="map_<%= id %>">
+        <span class="mapName"><%= map.name %></span> 
+        <span class="mapLength"><%= map.cols %>x<%= map.rows %></span> 
+        <span class="mapAuthor"><%= map.time %></span>
       </label><br>
     <% }) %>
     </ul>
