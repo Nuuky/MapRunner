@@ -37,7 +37,7 @@
           var min = `${(Math.floor(nb/1000/60) < 10) ? '0' : ''}${Math.floor(nb/1000/60)}`
           return min + ':' + sec + ':' + ms
         }
-        var theTime = getTime(map.time)
+        var theTime = (map.time) ? getTime(map.time) : '--'
         %>      
         <p class="map" onclick="checkForClick(this)">
           <span class="name"><%= map.name %></span> 

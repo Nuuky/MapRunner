@@ -52,6 +52,12 @@ app.get('/', async (req, res) => {
   console.log("[JOIN] New player")
 })
 
+app.get('/test', (req, res) => {
+  req.body.data = "#0123"
+  //var data = req.bodyPattern('data', /((#|[0-9]|[a-z]){4}-?,?)*/gi)
+  console.log(req.bodyPattern('data', /[0-9]/))
+})
+
 app.post('/callMap', (req, res) => {
   
   var name = req.bodyString('name')
