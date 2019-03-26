@@ -62,8 +62,18 @@ app.post('/saveMap', (req, res) => {
       if (err) return console.error(err);
       if (map) return console.log('Map already exist !')
       
-      Map
+      const newMap = new Map({
+        name: req.body.name,
+        cols: req.body.cols,
+        rows: req.body.rows,
+        time: 0,
+        data: req.body.data
+      })
+            
+    newMap.save(function (err, newMap) {
+    if (err) return console.error(err);
     });
+  });
 })
 
 app.listen(3000, () => {
