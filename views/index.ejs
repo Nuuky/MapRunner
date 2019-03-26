@@ -45,7 +45,9 @@
   <div id="mapList">
     <ul>
     <% maps.forEach((map, id) => { %>
-      <input type="radio" name="map" id="<%= id %>"><label for="<%= id %>"><span class="mapName"><%= map.name %></span> <span class="mapAuthor"><%= map.author %></span> <span class="mapLength"><%= map.cols %>x<%= map.rows %></span></label><br>
+      <input type="radio" name="map" id="<%= id %>">
+        <label for="<%= id %>">
+          <span class="mapName"><%= map.name %></span> <span class="mapAuthor"><%= map.author %></span> <span class="mapLength"><%= map.cols %>x<%= map.rows %></span></label><br>
     <% }) %>
     </ul>
   </div>

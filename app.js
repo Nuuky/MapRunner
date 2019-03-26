@@ -7,7 +7,7 @@ const bodyParser = require('body-parser');
 
 
 
-mongoose.connect(process.env.DB, { useNewUrlParser: true });
+mongoose.connect(process.env.DB, { useNewUrlParser: true, 'useCreateIndex': true });
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {
@@ -15,11 +15,19 @@ db.once('open', function() {
 });
 
 const MapSchema = new mongoose.Schema({
-  name: String,
-  author: String,
+  name: {
+    type: String,
+    unique: true,
+    required: true,
+    trim: true,
+  },
   cols: Number,
   rows: Number,
-  data: String,
+  time: Number,
+  data: {
+    type: String,
+    trim: true,
+  },
   
 });
 
