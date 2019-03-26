@@ -17,6 +17,8 @@ db.once('open', function() {
 const MapSchema = new mongoose.Schema({
   name: String,
   author: String,
+  cols: Number,
+  rows: Number,
   data: String,
   
 });
