@@ -12,27 +12,30 @@
 <!--       <canvas id="canvas" tabindex=1>You browser is too old to use canvas technologies.</canvas> -->
   </div>
   <div id="mapList">
-    <ul>
+    <p>
+      <span class="mapName"><%= map.name %></span> 
+      <span class="mapLength"><%= map.cols %>x<%= map.rows %></span> 
+      <span class="mapAuthor"><%= map.time %></span>
+    </p>
     <% maps.forEach((map, id) => { %>
-      <label class="map" for="map_<%= id %>" onclick="checkForClick().bind(this)">
+      <label class="map" for="map_<%= id %>" onclick="checkForClick(this)">
         <input type="radio" name="map" id="map_<%= id %>">
         <span class="mapName"><%= map.name %></span> 
         <span class="mapLength"><%= map.cols %>x<%= map.rows %></span> 
         <span class="mapAuthor"><%= map.time %></span>
       </label><br>
     <% }) %>
-    </ul>
   </div>
   
   <button id="test">Test</button>
   
   
   <script type="text/javascript">
-    function checkForClick() {
+    function checkForClick(el) {
       console.log(this)
       var oldSlected = document.querySelector('#mapList .map.selected')
       if(oldSlected) oldSlected.classList.remove('selected')
-      this.classList.add('selected')
+      el.classList.add('selected')
     }
   </script>
   
