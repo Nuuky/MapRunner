@@ -2565,7 +2565,7 @@ function Game(N, T, M){
     // CSS
     const head = document.head || document.getElementsByTagName('head')[0],
           style = document.createElement('style'),
-          css = `#playMenu{position:absolute;width:0;top:0;bottom:0;left:0;background:rgba(15,15,15,.99);text-align:center;overflow:hidden;padding-top:36vh;padding-top:calc(50vh - (7vh*2+10))}.playBtn{display:block;width:20vw;height:7vh;background:#000;color:#fff;margin:0 auto 10px auto}#timer{display:inline-block;margin:0;position:absolute;text-align:center;top:0;left:0;width:100%;padding:10px 0;color:#fff;font-size:2.3em;font-weight:700;z-index:1000}#timer>span{padding:10px 20px;background:rgba(0,0,0,.7)}`
+          css = `#playMenu{position:absolute;width:0;top:0;bottom:0;left:0;background:rgba(15,15,15,.99);text-align:center;overflow:hidden;padding-top:36vh;padding-top:calc(50vh - ((7vh+10)*3))}.playBtn{display:block;width:20vw;height:7vh;background:#000;color:#fff;margin:0 auto 10px auto}#timer{display:inline-block;margin:0;position:absolute;text-align:center;top:0;left:0;width:100%;padding:10px 0;color:#fff;font-size:2.3em;font-weight:700;z-index:1000}#timer>span{padding:10px 20px;background:rgba(0,0,0,.7)}`
     head.appendChild(style);
     style.type = 'text/css';
     style.id = 'stylePlay';
@@ -2612,16 +2612,16 @@ function Game(N, T, M){
     
   
     // BUTTON Restart
-    const btnQuit = document.createElement('input')
-    btnQuit.id    = 'btnQuit'
-    btnQuit.type  = 'button'
-    btnQuit.classList.add('playBtn')
-    btnQuit.value = 'QUIT'
-    btnQuit.onclick = (e) => {
+    const btnRestart = document.createElement('input')
+    btnRestart.id    = 'btnQuit'
+    btnRestart.type  = 'button'
+    btnRestart.classList.add('playBtn')
+    btnRestart.value = 'RESTART'
+    btnRestart.onclick = (e) => {
       e.preventDefault()
-      game.end()
+      game.window.play.gameReset()
     }
-    div.append(btnQuit)
+    div.append(btnRestart)
   
     
   
@@ -2646,6 +2646,20 @@ function Game(N, T, M){
       game.cfg.edited = true
     }
     div.append(btnEdit)
+  
+    
+  
+    // BUTTON Quit
+    const btnQuit = document.createElement('input')
+    btnQuit.id    = 'btnQuit'
+    btnQuit.type  = 'button'
+    btnQuit.classList.add('playBtn')
+    btnQuit.value = 'QUIT'
+    btnQuit.onclick = (e) => {
+      e.preventDefault()
+      game.end()
+    }
+    div.append(btnQuit)
   
   
   
