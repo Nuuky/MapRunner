@@ -2565,49 +2565,7 @@ function Game(N, T, M){
     // CSS
     const head = document.head || document.getElementsByTagName('head')[0],
           style = document.createElement('style'),
-          css = `
-      #playMenu {
-        position: absolute;
-        width: 0;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        background: rgba(15,15,15,0.99);
-        text-align: center;
-        overflow: hidden;
-        padding-top: 36vh;
-        padding-top: calc(50vh - (7vh*2+10));
-      }
-  
-      .playBtn {
-        display: block;
-        width: 20vw;
-        height: 7vh;
-        background: black;
-        color: white;
-        margin: 0 auto 10px auto;
-      }
-
-      #timer {
-        display: inline-block;
-        margin: 0;
-        position: absolute;
-        text-align: center;
-        top: 0;
-        left: 0;
-        width:100%;
-        padding: 10px 0;
-        color: white;
-        font-size: 2.3em;
-        font-weight: bold;
-        z-index: 1000;
-      }
-
-      #timer > span {
-        padding: 10px 20px;
-        background: rgba(0,0,0,0.7);
-      }
-    `
+          css = `#playMenu{position:absolute;width:0;top:0;bottom:0;left:0;background:rgba(15,15,15,.99);text-align:center;overflow:hidden;padding-top:36vh;padding-top:calc(50vh - (7vh*2+10))}.playBtn{display:block;width:20vw;height:7vh;background:#000;color:#fff;margin:0 auto 10px auto}#timer{display:inline-block;margin:0;position:absolute;text-align:center;top:0;left:0;width:100%;padding:10px 0;color:#fff;font-size:2.3em;font-weight:700;z-index:1000}#timer>span{padding:10px 20px;background:rgba(0,0,0,.7)}`
     head.appendChild(style);
     style.type = 'text/css';
     style.id = 'stylePlay';
@@ -2654,16 +2612,16 @@ function Game(N, T, M){
     
   
     // BUTTON Restart
-    const btnRestart = document.createElement('input')
-    btnRestart.id    = 'btnRestart'
-    btnRestart.type  = 'button'
-    btnRestart.classList.add('playBtn')
-    btnRestart.value = 'RESTART'
-    btnRestart.onclick = (e) => {
+    const btnQuit = document.createElement('input')
+    btnQuit.id    = 'btnQuit'
+    btnQuit.type  = 'button'
+    btnQuit.classList.add('playBtn')
+    btnQuit.value = 'QUIT'
+    btnQuit.onclick = (e) => {
       e.preventDefault()
-      game.window.play.gameReset()
+      game.end()
     }
-    div.append(btnRestart)
+    div.append(btnQuit)
   
     
   
@@ -2700,66 +2658,7 @@ function Game(N, T, M){
     // CSS
     const head = document.head || document.getElementsByTagName('head')[0],
           style = document.createElement('style'),
-          css = `
-      #toolbar {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        background: rgba(15,15,15, 1);
-        overflow: hidden;
-        text-align: center;
-        padding-top: 20vh;
-      }
-  
-      #toolbar > * {
-        margin: 20px auto;
-      }
-  
-      .dispBlock {
-        display: block;
-      }
-  
-      #playH2 {
-        margin-bottom: 30px;
-      }
-  
-      #btnHide {
-        position: absolute;
-        padding: ${game.canvas.height/2-20}px 7px;
-        height: 100%;
-        top: 0;
-        right: 0;
-        background: black;
-        color: white;
-        margin: 0 auto;
-        text-decoration: none;
-      }
-  
-      .inputSpan > input {
-        width: 15%;
-      }
-  
-      #selectSpan > * {
-        display: block;
-        margin: auto;
-      }
-  
-      .playBtn {
-        border: 1px solid white;
-        padding: 10px 20px;
-        background: black;
-        font-weight: bold;
-        color: white;
-        margin: auto 5px !important;
-        cursor: pointer;
-      }
-  
-      #errorMsg {
-        color: red;
-        font-size: 1.1em;
-      }
-    `
+          css = `#toolbar{position:absolute;top:0;bottom:0;left:0;background:rgba(15,15,15,1);overflow:hidden;text-align:center;padding-top:20vh}#toolbar>*{margin:20px auto}.dispBlock{display:block}#playH2{margin-bottom:30px}#btnHide{position:absolute;padding:${game.canvas.height/2-20}px 7px;top:0;right:0;background:#000;color:#fff;margin:0 auto;text-decoration:none}.inputSpan>input{width:15%}#selectSpan>*{display:block;margin:auto}.playBtn{border:1px solid #fff;padding:10px 20px;background:#000;font-weight:700;color:#fff;margin:auto 5px!important;cursor:pointer}#errorMsg{color:red;font-size:1.1em}`
     head.appendChild(style);
     style.type = 'text/css';
     style.id = 'styleEdit'
