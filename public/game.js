@@ -273,9 +273,9 @@
             colStart = (Math.floor((tX / scale) * -1) - offMap > 0) ? Math.floor((tX / scale) * -1) - offMap : 0,
             rowStart = (Math.floor((tY / scale) * -1) - offMap > 0) ? Math.floor((tY / scale) * -1) - offMap : 0,
             colEnd   = ((Math.ceil(cWidth  / scale) + colStart)+offMap*2 > colMax  ) ? colMax : (Math.ceil(cWidth  / scale) + colStart)+offMap*2,
-            rowEnd   = ((Math.ceil(cHeight / scale) + rowStart)+offMap*2 > rowStart) ? rowMax : (Math.ceil(cHeight / scale) + rowStart)+offMap*2;
+            rowEnd   = ((Math.ceil(cHeight / scale) + rowStart)+offMap*2 > rowMax) ? rowMax : (Math.ceil(cHeight / scale) + rowStart)+offMap*2;
       
-    
+      // console.log(rowEnd, rowStart)
       Engine.create(colEnd-colStart, rowEnd-rowStart, scale, offMap, tX, tY)
   
       const layerName = ['static', 'dynamic']
