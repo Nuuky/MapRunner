@@ -72,8 +72,8 @@ app.post('/saveMap', (req, res) => {
   else if (req.body.name > 10) return
   
   var name = req.sanitize(req.body.name);
-  var cols = (req.body.cols > 10 && req.body.cols < 1000) ? true : false
-  var rows = (req.body.rows > 10 && req.body.rows < 500) ? true : false
+  var cols = (req.body.cols >= 10 && req.body.cols <= 1000) ? true : false
+  var rows = (req.body.rows >= 10 && req.body.rows <= 500) ? true : false
   var data = /((#|[0-9]|[a-z]){4}-?,?)*/gi.test(req.body.data)
   if(!cols || !rows || !data) return console.error(`[SAVE] Something wrong with data set:\nName: ${req.body.name}\nSize: ${req.body.cols}(${cols})x${req.body.rows}(${rows})\nData: ${data}`)
   
@@ -101,8 +101,8 @@ app.post('/saveMap', (req, res) => {
 
 app.post('/scoreMap', (req, res) => {
   var name = req.sanitize(req.body.name);
-  var time = (typeof req.body.time === 'number' && time > 0) ? true : false
-  if(!time) return console.log(`[SCORE] Something wrong with time: \n${req.body.time}`)
+  var time = (req.body.time > 0) ? true : false
+  if(!time) return console.error(`[SCORE] Something wrong with time: \n${req.body.time}`)
   
   Map.where({ name: name }).updateOne({ $set: { time: req.body.time }}).exec()
   console.log(`[SCORE] New score for ${name}: ${getTime(req.body.time)}`)
