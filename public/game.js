@@ -25,8 +25,8 @@
       this.cols = cols
       this.scale = scale
       
-      this.offX = (offX < 0) ? offX + (gap*scale) : 0
-      this.offY = (offY < 0) ? offY + (gap*scale) : 0
+      this.offX = (offX + (gap*scale) < 0) ? offX + (gap*scale) : 0
+      this.offY = (offY + (gap*scale) < 0) ? offY + (gap*scale) : 0
 
       this.clear()
       for(let i = 0; i < this.rows; i++) {
