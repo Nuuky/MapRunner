@@ -34,10 +34,10 @@
               this.cells[i][j] = []
           }
       }
+      console.log("cellsLength:", this.cells[0].length, this.cells.length)
   }
 
   clear() {
-      if(this.cells[0]) console.log("cellsLength:", this.cells[0].length, this.cells.length)
       this.cells = []
   }
 
