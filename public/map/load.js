@@ -13,7 +13,7 @@ function onProgress(event) {
         var loading         = document.getElementById('loading'),
             ladingBar       = document.getElementById('loadBarIn'),
             percentComplete = (event.loaded / event.total)*100;
-        if (loading.style.display === "none") loading.style.display = "block";
+        loading.style.display = "block";
         ladingBar.style.width =  percentComplete+"%"
         console.log("Téléchargement: %d%%", percentComplete);
     } else {
@@ -40,6 +40,10 @@ function onLoad(event) {
 function onLoadEnd(event) {
     // Cet événement est exécuté, une fois la requête terminée.
   // console.log("Le transfert est terminé. (peut importe le résultat)");
+  var loading = document.getElementById('loading');
+  setTimeout(function() {
+        loading.style.display = "none";
+  }, 200)
 }
 
 
