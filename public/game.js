@@ -16,6 +16,8 @@
       this.scale = scale
       this.offX = null
       this.offY = null
+    
+    this.first = true;
   }
 
   create(rows, cols, scale, gap, offX, offY) {
@@ -37,7 +39,7 @@
   }
 
   clear() {
-      console.log(this.cells)
+      // console.log(this.cells)
       this.cells = []
   }
 
@@ -56,6 +58,10 @@
           for(let col = cellStartX; col < cellEndX; col++) {
               if(this.makeCell(row, col)) {
                   this.cells[row][col].push(entity)
+                if(this.first) {
+                  console.log(this.cells[row][col])
+                  this.first = false
+                }
               }
           }
       }
