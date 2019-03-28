@@ -34,8 +34,8 @@ const MapSchema = new mongoose.Schema({
 
 var Map = mongoose.model('Map', MapSchema);
 
-app.use(bodyParser.json({limit: '50mb', extended: true}));
-app.use(bodyParser.urlencoded({limit: '50mb', extended: true }));
+app.use(bodyParser.json({limit: '5mb', extended: true}));
+app.use(bodyParser.urlencoded({limit: '5mb', extended: true }));
 
 app.use(expressSanitizer());
 
