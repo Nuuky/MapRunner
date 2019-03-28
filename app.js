@@ -69,6 +69,7 @@ app.post('/callMap', (req, res) => {
 
 app.post('/saveMap', (req, res) => {
   if (!req.body.name) return
+  else if (req.body.name > 10) return
   
   var name = req.sanitize(req.body.name);
   var cols = (typeof req.body.cols === 'number' && req.body.cols > 0) ? true : false
