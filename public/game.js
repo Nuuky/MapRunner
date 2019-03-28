@@ -25,8 +25,8 @@
       this.cols = cols
       this.scale = scale
       
-      this.offX = offX + (gap*scale)
-      this.offY = offY + (gap*scale)
+      this.offX = (offX < 0) ? offX + (gap*scale) : 0
+      this.offY = (offY < 0) ? offY + (gap*scale) : 0
 
       this.clear()
       for(let i = 0; i < this.rows; i++) {
@@ -44,8 +44,8 @@
   }
 
   insert(entity) {
-      const x             = entity.getLeft(true) - this.offX,
-            y             = entity.getTop(true)  - this.offY,
+      const x             = entity.getLeft(true) + this.offX,
+            y             = entity.getTop(true)  + this.offY,
             w             = x + entity.w,
             h             = y + entity.h,
             scale         = this.scale,
