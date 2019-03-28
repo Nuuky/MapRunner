@@ -10,7 +10,11 @@ function checkForClick(el) {
 
 function onProgress(event) {
     if (event.lengthComputable) {
-        var percentComplete = (event.loaded / event.total)*100;
+        var loading         = document.getElementById('loading'),
+            ladingBar       = document.getElementById('loadBarIn'),
+            percentComplete = (event.loaded / event.total)*100;
+        if (loading.style.display === "none") loading.style.display = "block";
+        ladingBar.style.width =  percentComplete+"%"
         console.log("Téléchargement: %d%%", percentComplete);
     } else {
         // Impossible de calculer la progression puisque la taille totale est inconnue
