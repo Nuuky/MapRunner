@@ -2982,7 +2982,7 @@ function Game(N, T, M){
     };
     saveReq.open('POST', '/saveMap', true);
     saveReq.setRequestHeader("Content-type", "application/json");
-    saveReq.send(JSON.stringify({name: game.cfg.name, cols: cols, rows: rows, data: str}));
+    saveReq.send(JSON.stringify({name: game.cfg.name, cols: game.cfg.cols, rows: game.cfg.rows, data: str}));
 
       // copyToClipboard(str)
       // alert('The map has been copied on your clipboard');
