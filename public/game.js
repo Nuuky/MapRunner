@@ -34,10 +34,10 @@
               this.cells[i][j] = []
           }
       }
-      console.log("cellsLength:", this.cells[0].length, this.cells.length)
   }
 
   clear() {
+      console.log(this.cells)
       this.cells = []
   }
 
@@ -54,7 +54,7 @@
 
       for(let row = cellStartY; row < cellEndY; row++) {
           for(let col = cellStartX; col < cellEndX; col++) {
-              if(this.cells[row] && this.cells[row][col]) {
+              if(this.makeCell(row, col)) {
                   this.cells[row][col].push(entity)
               }
           }
