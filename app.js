@@ -74,8 +74,8 @@ app.post('/saveMap', (req, res) => {
   var name = req.sanitize(req.body.name);
   var cols = (typeof req.body.cols === 'number' && req.body.cols > 10 && req.body.cols < 1000) ? true : false
   var rows = (typeof req.body.rows === 'number' && req.body.rows > 10 && req.body.rows < 500) ? true : false
-  var data = (req.body.data.match(/((#|[0-9]|[a-z]){4}-?,?)*/gi).length <= 2) ? true : false
-  if(!cols || !rows || !data) return console.error(`[SAVE] Something wrong with data set: \n${req.body}`)
+  var data = /((#|[0-9]|[a-z]){4}-?,?)*/gi.test(req.body.data)
+  if(!cols || !rows || !data) return console.error(`[SAVE] Something wrong with data set:\n${req.body.name}\n${req.body.cols}x${req.body.rows}\n${data}`)
   
   Map.findOne({ name: name }, (err, map) => {
     if (err) return console.error(err);
