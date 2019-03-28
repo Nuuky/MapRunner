@@ -2736,6 +2736,7 @@ function Game(N, T, M){
     const inputRows     = document.createElement('input')
     inputRows.type      = 'number'
     inputRows.min       = 10
+    inputRows.max       = 500
     inputRows.value     = game.cfg.rows
     inputRows.onchange  = function(e) {
       const newRows     = e.target.value,
@@ -2773,6 +2774,7 @@ function Game(N, T, M){
     const inputCols = document.createElement('input')
     inputCols.type  = 'number'
     inputCols.min       = 10
+    inputCols.max       = 1000
     inputCols.value = game.cfg.cols
     inputCols.onchange = function(e) {
       const newCols     = e.target.value
