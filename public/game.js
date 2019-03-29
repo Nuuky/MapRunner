@@ -1,5 +1,3 @@
-
-
   // CLASS
   var GRAVITY   = 0.0035,
       JUMPFORCE = 1.0,
@@ -1137,7 +1135,7 @@
       return false
     }
   }
-  class Player extends Block {
+  class Player       extends Block {
   constructor(x, y, name, Game) {
     super(x, y, Game)
 
@@ -1518,7 +1516,7 @@
     this.collision.bottom = []
   }
   }
-  class Spawn extends Block {
+  class Spawn        extends Block {
     constructor(x, y, Game)  {
       super(x, y, Game)
       
@@ -1557,7 +1555,7 @@
       
     }
   }
-  class End extends Block {
+  class End          extends Block {
     constructor(x, y, Game)  {
       super(x, y, Game)
       
@@ -1602,7 +1600,7 @@
       player.dx = player.dy = 0
     }
   }
-  class Wall extends Block {
+  class Wall         extends Block {
     constructor(x, y, Game) {
       super(x, y, Game)
     
@@ -1672,7 +1670,7 @@
       // console.log(player.hasBounced)
     }
   }
-  class Spikes extends Block {
+  class Spikes       extends Block {
     constructor(x, y, Game)  {
       super(x, y, Game)
       
@@ -1712,7 +1710,7 @@
       this.normalCollision(player, side)
     }
   }
-  class BouncingBox extends Block {
+  class BouncingBox  extends Block {
     constructor(x, y, Game)  {
       super(x, y, Game)
 
@@ -1827,7 +1825,7 @@
       }
     }
   }
-  class Sword extends Block {
+  class Sword        extends Block {
     constructor(x, y, Game)  {
       super(x, y, Game)
   
@@ -1944,8 +1942,6 @@
       }
     }
   }
-
-
 
 
 function Game(N, T, M){
@@ -2989,10 +2985,6 @@ function toolbar(game) {
   return div
 
 
-
-
-
-
   // FUNCTIONS
   function copyToClipboard(text){
     var dummy = document.createElement("input");
@@ -3051,5 +3043,3 @@ function toolbar(game) {
     }
   }
 }
-  
-  

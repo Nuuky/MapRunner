@@ -1,5 +1,4 @@
 function checkForClick(el) {
-  console.log(this)
   var oldSlected = document.querySelector('#mapList .map.selected'),
       btnPlay    = document.getElementById('btnPlay');
   if(btnPlay.disabled) btnPlay.disabled = false;
