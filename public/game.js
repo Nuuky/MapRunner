@@ -8,176 +8,184 @@
       MAGNITUDEX = 2,
       MAGNITUDEY = 0.2;
   class Engine {
-    constructor(c, cols, rows, scale) {
-        this.c = c
-        this.cols = cols
-        this.rows = rows
-        this.cells = []
-        this.scale = scale
-    }
+  constructor(c, cols, rows, scale) {
+    this.c = c
+    this.cols = cols
+    this.rows = rows
+    this.cells = []
+    this.scale = scale
+    
+    this.offX = null
+    this.offY = null
+    
+    this.first = true;
+  }
 
-    create(rows, cols, scale) {
-        this.rows = rows
-        this.cols = cols
-        this.scale = scale
+  create(cols, rows, scale, gap, offX, offY) {
+      this.rows = rows
+      this.cols = cols
+      this.scale = scale
+    
+      this.offX = getOff(offX, gap)
+      this.offY = getOff(offY, gap)
 
-        this.clear()
-        for(let i = 0; i < this.rows; i++) {
-            // this.cells[i] = new Array(this.cols)
-            this.cells[i] = []
-            for(let j = 0; j < this.cols; j++) {
-                this.cells[i][j] = []
-            }
-        }
-    }
-
-    clear() {
-        this.cells = []
-    }
-
-    insert(entity) {
-        const x             = entity.getLeft(true),
-              y             = entity.getTop(true),
-              w             = entity.getRight(true),
-              h             = entity.getBottom(true),
-              scale         = this.scale,
-              cellStartX    = Math.floor(x / scale),
-              cellEndX      = Math.ceil(w / scale),
-              cellStartY    = Math.floor(y / scale),
-              cellEndY      = Math.ceil(h / scale);
-
-        // if(entity.type === 'Player') {
-        //     // console.log(cellStartX, cellEndX)
-        //     // console.log(cellStartY, cellEndY)
-        // }
-
-
-        for(let row = cellStartY; row < cellEndY; row++) {
-            for(let col = cellStartX; col < cellEndX; col++) {
-                if(this.makeCell(row, col)) {
-                    this.cells[row][col].push(entity)
-                }
-            }
-        }
-    }
-
-    makeCell(row, col) {
-        const cells = this.cells
-        if(!cells[row]) return false
-        if(!cells[row][col]) this.cells[row][col] = []
-        return true
-    }
-
-    isColliding(o1, o2) {
-        const l1 = o1.getLeft(true), r1 = o1.getRight(true),
-              t1 = o1.getTop(true),  b1 = o1.getBottom(true),
-              l2 = o2.getLeft(true), r2 = o2.getRight(true),
-              t2 = o2.getTop(true),  b2 = o2.getBottom(true);
-
-        
-            if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) 
-            {
-                // console.log('collision')
-                return true
-            }
-            //console.log('in')
-                // console.log('no collision')
-            return false
-    }
-
-    checkCells() {
-        this.cells.forEach(row => {
-            row.forEach(cell => {
-                if(!cell || cell.length <= 1) return
-                this.testCellEntities(cell)
-            })
-        })
-    }
-
-    testCellEntities(cell) {
-        // console.log(cell)
-
-        const length = cell.length;
-
-        cell.forEach((entity1, i) => {
-            // this.c.beginPath()
-            // this.c.rect(entity1.getLeft(true), entity1.getTop(true), 64, 64)
-            // this.c.fillStyle = 'green'
-            // this.c.fill()
-            // this.c.closePath()
-
-            for(let j = i+1; j < length; j++) {
-                const entity2 = cell[j]
-                if(!this.isColliding(entity1, entity2) || entity1 === entity2) continue //  || (isWall1 && isWall2)
-                this.resolve(entity1, entity2)
-            }
-        })
-    }
-
-
-
-    resolve(A, B) {
-        let Adx = A.dx, Ady = A.dy,
-            Bdx = B.dx, Bdy = B.dy,
-            steps = 1, maxSpeed = 16;
-
-        if (Math.abs(A.dx) > maxSpeed || Math.abs(A.dy) > maxSpeed ||
-            Math.abs(B.dx) > maxSpeed || Math.abs(B.dy) > maxSpeed ) {
-            steps = 10
-        }
-
-        for (let i = 1; i <= steps; i++) {
-            Adx = A.dx/steps*i, Ady = A.dy/steps*i,
-            Bdx = B.dx/steps*i, Bdy = B.dy/steps*i;
-
-            const   w  = 0.5 * (A.w + B.w),
-                    h  = 0.5 * (A.h + B.h),
-                    dx =(A.getHalfWidth() + Adx)  - (B.getHalfWidth() + Bdx),
-                    dy = (A.getHalfHeight() + Ady) - (B.getHalfHeight() + Bdy);
-
-            if (Math.abs(dx) <= w && Math.abs(dy) <= h)
-            {
-                /* collision! */
-                const wy = w * dy,
-                    hx = h * dx;
-
-                if (wy > hx) 
-                {
-                    if (wy > -hx) {
-                        /* collision at the top */
-                        A.resolve(B, 'TOP')
-                        B.resolve(A, 'BOTTOM')
-                    }
-                    else {
-                        /* on the left */
-                        A.resolve(B, 'RIGHT')
-                        B.resolve(A, 'LEFT')
-                    }
-                    break;
-                }
-                else 
-                {
-                    if (wy > -hx) {
-                        /* on the right */
-                        A.resolve(B, 'LEFT')
-                        B.resolve(A, 'RIGHT')
-                    }
-                    else {
-                        /* at the bottom */
-                        A.resolve(B, 'BOTTOM')
-                        B.resolve(A, 'TOP')
-                    }
-                    break;
-                }
-            }
-        }
-
-        // if(B.type === 'BouncingBox') {
-        //     console.log('BouncingBox', A.dy)
-        //     this.game.playing[0] = false
-        // }
+      this.clear()
+    
+      for(let i = 0; i < this.rows; i++) {
+          this.cells[i] = []
+          for(let j = 0; j < this.cols; j++) {
+              this.cells[i][j] = []
+          }
+      }
+    
+    function getOff(off, gap) {
+      if(off >= 0) return 0
+      if(off + gap*64 > 0) {
+        return off + (gap*64 - (off + gap*64))
+      }
+      else {
+        return off + gap*64
+      }
     }
   }
+
+  clear() {
+      this.cells = []
+  }
+
+  insert(entity) {
+    const x          = entity.getLeft(true) + this.offX,
+          y          = entity.getTop(true) + this.offY,
+          w          = x + entity.w,
+          h          = y + entity.h,
+          scale      = this.scale,
+          cellStartX = Math.floor(x / scale),
+          cellEndX   = Math.ceil(w / scale),
+          cellStartY = Math.floor(y / scale),
+          cellEndY   = Math.ceil(h / scale);
+
+    for(let row = cellStartY; row < cellEndY; row++) {
+      for(let col = cellStartX; col < cellEndX; col++) {
+        if(this.makeCell(row, col)) {
+            this.cells[row][col].push(entity)
+        }
+      }
+    }
+    
+  }
+
+  makeCell(row, col) {
+      const cells = this.cells
+      if(!cells[row]) return false
+      if(!cells[row][col]) return false
+      return true
+  }
+
+  isColliding(o1, o2) {
+      const l1 = o1.getLeft(true), r1 = o1.getRight(true),
+            t1 = o1.getTop(true),  b1 = o1.getBottom(true),
+            l2 = o2.getLeft(true), r2 = o2.getRight(true),
+            t2 = o2.getTop(true),  b2 = o2.getBottom(true);
+
+      
+          if (l1 < r2 && r1 > l2 && t1 < b2 && b1 > t2) 
+          {
+              // console.log('collision')
+              return true
+          }
+          // console.log('in')
+          // console.log('no collision')
+          return false
+  }
+
+  checkCells() {
+      this.cells.forEach(row => {
+          row.forEach(cell => {
+            // if(this.first) console.log(cell)
+            //if(!cell || cell.length <= 1) return
+            this.testCellEntities(cell)
+          })
+      })
+    this.first = false
+  }
+
+  testCellEntities(cell) {
+      //console.log(cell)
+
+      const length = cell.length;
+
+      cell.forEach((entity1, i) => {
+          // this.c.beginPath()
+          // this.c.rect(entity1.getLeft(true), entity1.getTop(true), 64, 64)
+          // this.c.fillStyle = 'green'
+          // this.c.fill()
+          // this.c.closePath()
+
+          for(let j = i+1; j < length; j++) {
+              const entity2 = cell[j]
+              if(!this.isColliding(entity1, entity2) || entity1 === entity2) continue //  || (isWall1 && isWall2)
+              this.resolve(entity1, entity2)
+          }
+      })
+  }
+
+  resolve(A, B) {
+      let Adx = A.dx, Ady = A.dy,
+          Bdx = B.dx, Bdy = B.dy,
+          steps = 1, maxSpeed = 16;
+
+      if (Math.abs(A.dx) > maxSpeed || Math.abs(A.dy) > maxSpeed ||
+          Math.abs(B.dx) > maxSpeed || Math.abs(B.dy) > maxSpeed ) {
+          steps = 10
+      }
+
+      for (let i = 1; i <= steps; i++) {
+          Adx = A.dx/steps*i, Ady = A.dy/steps*i,
+          Bdx = B.dx/steps*i, Bdy = B.dy/steps*i;
+
+          const   w  = 0.5 * (A.w + B.w),
+                  h  = 0.5 * (A.h + B.h),
+                  dx =(A.getHalfWidth() + Adx)  - (B.getHalfWidth() + Bdx),
+                  dy = (A.getHalfHeight() + Ady) - (B.getHalfHeight() + Bdy);
+
+          if (Math.abs(dx) <= w && Math.abs(dy) <= h)
+          {
+              /* collision! */
+              const wy = w * dy,
+                  hx = h * dx;
+
+              if (wy > hx) 
+              {
+                  if (wy > -hx) {
+                      /* collision at the top */
+                      A.resolve(B, 'TOP')
+                      B.resolve(A, 'BOTTOM')
+                  }
+                  else {
+                      /* on the left */
+                      A.resolve(B, 'RIGHT')
+                      B.resolve(A, 'LEFT')
+                  }
+                  break;
+              }
+              else 
+              {
+                  if (wy > -hx) {
+                      /* on the right */
+                      A.resolve(B, 'LEFT')
+                      B.resolve(A, 'RIGHT')
+                  }
+                  else {
+                      /* at the bottom */
+                      A.resolve(B, 'BOTTOM')
+                      B.resolve(A, 'TOP')
+                  }
+                  break;
+              }
+          }
+      }
+  }
+}
   class Camera {
 
     constructor(game) {
@@ -268,20 +276,30 @@
             colMax  = map[0].length,
             rowMax  = map.length,
             cWidth  = canvas.width,
-            cHeight  = canvas.height;
-    
-      Engine.create(cfg.rows, cfg.cols, scale)
+            cHeight = canvas.height;
+            
+      const offMap      = 20,
+            gridTX      = Math.floor((tX / scale)) *-1,
+            gridTY      = Math.floor((tY / scale)) *-1,
+            gridCWidth  = Math.ceil(cWidth  / scale),
+            gridCHeight = Math.ceil(cHeight / scale),
+            
+            colStart = (gridTX - offMap > 0) ? gridTX - offMap : 0,
+            rowStart = (gridTY - offMap > 0) ? gridTY - offMap : 0,
+            
+            colEnd   = (gridTX + gridCWidth  + offMap >= colMax) ? colMax : gridTX + gridCWidth  + offMap,
+            rowEnd   = (gridTY + gridCHeight + offMap >= rowMax) ? rowMax : gridTY + gridCHeight + offMap;
+      
+      // console.log([{colStart, colEnd, result: colEnd-colStart}, {rowStart, rowEnd, result: rowEnd-rowStart}])
+      
+      // console.log(rowEnd, rowStart)
+      Engine.create(colEnd-colStart, rowEnd-rowStart, scale, offMap, tX, tY)
+            
       
       if(!Player.isDead && !Player.hide) {
         Player.move(dt)
         Engine.insert(Player)
       }
-  
-      const offMap   = 20,
-            colStart = (Math.floor((tX / scale) * -1) - offMap > 0) ? Math.floor((tX / scale) * -1) - offMap : 0,
-            rowStart = (Math.floor((tY / scale) * -1) - offMap > 0) ? Math.floor((tY / scale) * -1) - offMap : 0,
-            colEnd   = ((Math.ceil(cWidth  / scale) + colStart)+offMap*2 > colMax  ) ? colMax : (Math.ceil(cWidth  / scale) + colStart)+offMap*2,
-            rowEnd   = ((Math.ceil(cHeight / scale) + rowStart)+offMap*2 > rowStart) ? rowMax : (Math.ceil(cHeight / scale) + rowStart)+offMap*2
   
       const layerName = ['static', 'dynamic']
       layerName.map(name => {
@@ -338,12 +356,17 @@
       c.save()
       c.translate(tX, tY)
       
-    
-      const offMap   = 1,
-            colStart = (Math.floor((tX / scale) * -1) - offMap > 0) ? Math.floor((tX / scale) * -1) - offMap : 0,
-            rowStart = (Math.floor((tY / scale) * -1) - offMap > 0) ? Math.floor((tY / scale) * -1) - offMap : 0,
-            colEnd   = ((Math.ceil(cWidth  / scale) + colStart)+offMap*2 > colMax  ) ? colMax : (Math.ceil(cWidth  / scale) + colStart)+offMap*2,
-            rowEnd   = ((Math.ceil(cHeight / scale) + rowStart)+offMap*2 > rowStart) ? rowMax : (Math.ceil(cHeight / scale) + rowStart)+offMap*2
+      const offMap      = 1,
+            gridTX      = Math.floor((tX / scale)) *-1,
+            gridTY      = Math.floor((tY / scale)) *-1,
+            gridCWidth  = Math.ceil(cWidth  / scale),
+            gridCHeight = Math.ceil(cHeight / scale),
+            
+            colStart = (gridTX - offMap > 0) ? gridTX - offMap : 0,
+            rowStart = (gridTY - offMap > 0) ? gridTY - offMap : 0,
+            
+            colEnd   = (gridTX + gridCWidth  + offMap >= colMax) ? colMax : gridTX + gridCWidth  + offMap,
+            rowEnd   = (gridTY + gridCHeight + offMap >= rowMax) ? rowMax : gridTY + gridCHeight + offMap;
   
       const layerName = ['background', 'static', 'dynamic', 'foreground']
       layerName.map(name => {
@@ -358,7 +381,8 @@
             const cell = layer[y][x]
             if(cell.empty) continue
             
-            if (!cell.collision) cell.update()
+            //if (!cell.collision) cell.update()
+            //if (cell.type === "Block") return
             cell.draw()
           }
       }
@@ -953,6 +977,7 @@
     }
 
     draw() {
+      if(this.game.mode === 'play') return
       // const game      = this.game,
       //       c         = game.c,
       //       scale     = game.cfg.scale,
@@ -1684,7 +1709,6 @@
 
     resolve(player, side) {
       if(player.type != 'Player') return
-      
       this.normalCollision(player, side)
     }
   }
@@ -2521,431 +2545,394 @@ function Game(N, T, M){
 }
 
 
-
-
-
-// var Runner = new Game()
-
-
-
-
-//   // TempMenu
-//   let btns = []
-          
-//   const btn1 = new Button(Runner, Runner.canvas.width/2, Runner.canvas.height/2-40,     250, 80, 20, 'PLAY', 'test1', () => {
-//     Runner.mode = 'play'
-//     Runner.init()
-//     Runner.playing = [true, true]
-//     Runner.cfg.updateAll = true
-
-//     Runner.resetAnimate = true
-//     Runner.animate()
-//     Runner.window.play.start()
-//       btns.forEach(b => b.destroy())
-//   })
-
-
-//   const btn2 = new Button(Runner, Runner.canvas.width/2, btn1.getBottom()+20, 250, 80, 20, 'CUSTOM', 'test2', () => {
-//     Runner.mode = 'edit'
-//     Runner.init()
-//       setTimeout(() => {
-//         Runner.playing = [true, true]
-//         Runner.cfg.updateAll = true
-
-//         Runner.window[Runner.mode].start()
-          
-//         Runner.animate()
-//           btns.forEach(b => b.destroy())
-//       }, 200)
-//   })
-//   btns = [btn1, btn2]
-
-
-  function gameMenu(game) {
-    // CSS
-    const head = document.head || document.getElementsByTagName('head')[0],
-          style = document.createElement('style'),
-          css = `#playMenu{position:absolute;width:0;top:0;bottom:0;left:0;background:rgba(15,15,15,.99);text-align:center;overflow:hidden;padding-top:36vh;padding-top:calc(50vh - ((7vh+10)*3))}.playBtn{display:block;width:20vw;height:7vh;background:#000;color:#fff;margin:0 auto 10px auto}#timer{display:inline-block;margin:0;position:absolute;text-align:center;top:0;left:0;width:100%;padding:10px 0;color:#fff;font-size:2.3em;font-weight:700;z-index:1000}#timer>span{padding:10px 20px;background:rgba(0,0,0,.7)}`
-    head.appendChild(style);
-    style.type = 'text/css';
-    style.id = 'stylePlay';
-    if (style.styleSheet){
-      // This is required for IE8 and below.
-      style.styleSheet.cssText = css;
-    } else {
-      style.appendChild(document.createTextNode(css));
-    }
-
-
-    const gameDiv = document.getElementById('game'),
-          canvas = document.getElementById('canvas');
-
-    // DISPLAY TIME
-    const timer = document.createElement('p')
-    timer.id = "timer"
-    const timerSpan = document.createElement('span')
-    timerSpan.innerHTML = "00:00:00"
-    timer.appendChild(timerSpan)
-    gameDiv.appendChild(timer)
-  
-  
-    // CONTAINER
-    const div = document.createElement('div')
-    div.id    = 'playMenu'
-  
-    
-  
-    // BUTTON Resume
-    const btnResume = document.createElement('input')
-    btnResume.id    = 'btnResume'
-    btnResume.type  = 'button'
-    btnResume.classList.add('playBtn')
-    btnResume.value = 'RESUME'
-    btnResume.onclick = (e) => {
-      e.preventDefault()
-  
-      game.window.play.pauseTimer()
-      div.style.width = 0
-    }
-    div.append(btnResume)
-  
-    
-  
-    // BUTTON Restart
-    const btnRestart = document.createElement('input')
-    btnRestart.id    = 'btnQuit'
-    btnRestart.type  = 'button'
-    btnRestart.classList.add('playBtn')
-    btnRestart.value = 'RESTART'
-    btnRestart.onclick = (e) => {
-      e.preventDefault()
-      game.window.play.gameReset()
-    }
-    div.append(btnRestart)
-  
-    
-  
-    // BUTTON EDIT
-    const btnEdit = document.createElement('input')
-    btnEdit.id    = 'btnEdit'
-    btnEdit.type  = 'button'
-    btnEdit.classList.add('playBtn')
-    btnEdit.value = 'EDIT MAP'
-    btnEdit.onclick = (e) => {
-      e.preventDefault()
-  
-      game.window.play.end()
-      game.mode = 'edit'
-      game.window.edit.start()
-  
-      game.init()
-      game.playing = [true, true]
-      game.cfg.updateAll = true
-      game.canvas.focus()
-      game.animate()
-      game.cfg.edited = true
-    }
-    div.append(btnEdit)
-  
-    
-  
-    // BUTTON Quit
-    const btnQuit = document.createElement('input')
-    btnQuit.id    = 'btnQuit'
-    btnQuit.type  = 'button'
-    btnQuit.classList.add('playBtn')
-    btnQuit.value = 'QUIT'
-    btnQuit.onclick = (e) => {
-      e.preventDefault()
-      game.end()
-    }
-    div.append(btnQuit)
-  
-  
-  
-  
-    return div
+function gameMenu(game) {
+  // CSS
+  const head = document.head || document.getElementsByTagName('head')[0],
+        style = document.createElement('style'),
+        css = `#playMenu{position:absolute;width:0;top:0;bottom:0;left:0;background:rgba(15,15,15,.99);text-align:center;overflow:hidden;padding-top:36vh;padding-top:calc(50vh - ((7vh*4) + (10px*3))/2)}.playBtn{font-weight:bold;display:block;width:20vw;height:7vh;background:#000;color:#fff;margin:0 auto 10px auto}#timer{display:inline-block;margin:0;position:absolute;text-align:center;top:0;left:0;width:100%;padding:10px 0;color:#fff;font-size:2.3em;font-weight:700;z-index:1000}#timer>span{padding:10px 20px;background:rgba(0,0,0,.7)}`
+  head.appendChild(style);
+  style.type = 'text/css';
+  style.id = 'stylePlay';
+  if (style.styleSheet){
+    // This is required for IE8 and below.
+    style.styleSheet.cssText = css;
+  } else {
+    style.appendChild(document.createTextNode(css));
   }
 
 
-  function toolbar(game) {
-    // CSS
-    const head = document.head || document.getElementsByTagName('head')[0],
-          style = document.createElement('style'),
-          css = `#toolbar{position:absolute;top:0;bottom:0;left:0;background:rgba(15,15,15,1);overflow:hidden;text-align:center;padding-top:20vh}#toolbar>*{margin:20px auto}.dispBlock{display:block}#playH2{margin-bottom:30px}#btnHide{position:absolute;padding:${game.canvas.height/2-20}px 7px;top:0;right:0;background:#000;color:#fff;margin:0 auto;text-decoration:none}.inputSpan>input{width:15%}#selectSpan>*{display:block;margin:auto}.playBtn{border:1px solid #fff;padding:10px 20px;background:#000;font-weight:700;color:#fff;margin:auto 5px!important;cursor:pointer}#errorMsg{color:red;font-size:1.1em}`
-    head.appendChild(style);
-    style.type = 'text/css';
-    style.id = 'styleEdit'
-    if (style.styleSheet){
-      // This is required for IE8 and below.
-      style.styleSheet.cssText = css;
-    } else {
-      style.appendChild(document.createTextNode(css));
-    }
-  
-    // CONTAINER
-    const div = document.createElement('div')
-    div.id          = 'toolbar'
-    div.style.width = '25%'
-  
-  
-    const btnHide = document.createElement('a')
-    btnHide.id = 'btnHide'
-    btnHide.innerHTML       = '|||'
-    btnHide.href = ''
-    btnHide.onclick = (e) => {
-      e.preventDefault()
-      const width = div.style.width.replace(/px|%/i, '')
-      // e.preventDefault()
-      if(width > 20) div.style.width = 20
-      else div.style.width = '25%'
-    }
-    div.appendChild(btnHide)
-  
-  
-    // TITLE
-    const h2 = document.createElement('h2')
-    h2.innerHTML = "SETTINGS:"
-    h2.id = 'playH2'
-    div.appendChild(h2)
+  const gameDiv = document.getElementById('game'),
+        canvas = document.getElementById('canvas');
+
+  // DISPLAY TIME
+  const timer = document.createElement('p')
+  timer.id = "timer"
+  const timerSpan = document.createElement('span')
+  timerSpan.innerHTML = "00:00:00"
+  timer.appendChild(timerSpan)
+  gameDiv.appendChild(timer)
+
+
+  // CONTAINER
+  const div = document.createElement('div')
+  div.id    = 'playMenu'
+
+
+
+  // BUTTON Resume
+  const btnResume = document.createElement('input')
+  btnResume.id    = 'btnResume'
+  btnResume.type  = 'button'
+  btnResume.classList.add('playBtn')
+  btnResume.value = 'RESUME'
+  btnResume.onclick = (e) => {
+    e.preventDefault()
+
+    game.window.play.pauseTimer()
+    div.style.width = 0
+  }
+  div.append(btnResume)
+
+
+
+  // BUTTON Restart
+  const btnRestart = document.createElement('input')
+  btnRestart.id    = 'btnQuit'
+  btnRestart.type  = 'button'
+  btnRestart.classList.add('playBtn')
+  btnRestart.value = 'RESTART'
+  btnRestart.onclick = (e) => {
+    e.preventDefault()
+    game.window.play.gameReset()
+  }
+  div.append(btnRestart)
+
+
+
+  // BUTTON EDIT
+  const btnEdit = document.createElement('input')
+  btnEdit.id    = 'btnEdit'
+  btnEdit.type  = 'button'
+  btnEdit.classList.add('playBtn')
+  btnEdit.value = 'EDIT MAP'
+  btnEdit.onclick = (e) => {
+    e.preventDefault()
+
+    game.window.play.end()
+    game.mode = 'edit'
+    game.window.edit.start()
+
+    game.init()
+    game.playing = [true, true]
+    game.cfg.updateAll = true
+    game.canvas.focus()
+    game.animate()
+    game.cfg.edited = true
+  }
+  div.append(btnEdit)
+
+
+
+  // BUTTON Quit
+  const btnQuit = document.createElement('input')
+  btnQuit.id    = 'btnQuit'
+  btnQuit.type  = 'button'
+  btnQuit.classList.add('playBtn')
+  btnQuit.value = 'QUIT'
+  btnQuit.onclick = (e) => {
+    e.preventDefault()
+    game.end()
+  }
+  div.append(btnQuit)
+
+
+
+
+  return div
+}
+
+
+function toolbar(game) {
+  // CSS
+  const head = document.head || document.getElementsByTagName('head')[0],
+        style = document.createElement('style'),
+        css = `#toolbar{position:absolute;top:0;bottom:0;left:0;background:rgba(15,15,15,1);overflow:hidden;text-align:center;padding-top:20vh}#toolbar>*{margin:20px auto}.dispBlock{display:block}#playH2{margin-bottom:30px}#btnHide{position:absolute;padding:${game.canvas.height/2-20}px 7px;top:0;right:0;background:#000;color:#fff;margin:0 auto;text-decoration:none}.inputSpan>input{width:15%}#selectSpan>*{display:block;margin:auto}.playBtn{border:1px solid #fff;padding:10px 20px;background:#000;font-weight:700;color:#fff;margin:auto 5px!important;cursor:pointer}#errorMsg{color:red;font-size:1.1em}`
+  head.appendChild(style);
+  style.type = 'text/css';
+  style.id = 'styleEdit'
+  if (style.styleSheet){
+    // This is required for IE8 and below.
+    style.styleSheet.cssText = css;
+  } else {
+    style.appendChild(document.createTextNode(css));
+  }
+
+  // CONTAINER
+  const div = document.createElement('div')
+  div.id          = 'toolbar'
+  div.style.width = '25%'
+
+
+  // HIDE
+  const btnHide = document.createElement('a')
+  btnHide.id = 'btnHide'
+  btnHide.innerHTML       = '|||'
+  btnHide.href = ''
+  btnHide.onclick = (e) => {
+    e.preventDefault()
+    const width = div.style.width.replace(/px|%/i, '')
+    // e.preventDefault()
+    if(width > 20) div.style.width = "20px"
+    else div.style.width = '25%'
+  }
+  div.appendChild(btnHide)
+
+
+  // TITLE
+  const h2 = document.createElement('h2')
+  h2.innerHTML = "SETTINGS:"
+  h2.id = 'playH2'
+  div.appendChild(h2)
+
+
+  // INPUT NAME
+  const nameSpan       = document.createElement('span')
+  nameSpan.innerHTML   = 'Name: '
+  nameSpan.classList.add('dispBlock', 'inputSpan')
+  const inputName     = document.createElement('input')
+  inputName.type      = 'text'
+  inputName.maxLength = 10
+  inputName.value     = game.cfg.name
+
+  inputName.onchange  = function(e) {
+    game.cfg.name = e.target.value;
+  }
+
+
+  nameSpan.appendChild(inputName)
+  div.appendChild(nameSpan)
+
+
+  const layerName = ['background', 'static', 'dynamic', 'foreground']
+  // INPUT ROW
+  const rowSpan       = document.createElement('span')
+  rowSpan.innerHTML   = 'Row: '
+  rowSpan.classList.add('dispBlock', 'inputSpan')
+  const inputRows     = document.createElement('input')
+  inputRows.type      = 'number'
+  inputRows.min       = 10
+  inputRows.max       = 500
+  inputRows.value     = game.cfg.rows
+  inputRows.onchange  = function(e) {
+    let newRows       = e.target.value;
     
-    
-    // INPUT NAME
-    const nameSpan       = document.createElement('span')
-    nameSpan.innerHTML   = 'Name: '
-    nameSpan.classList.add('dispBlock', 'inputSpan')
-    const inputName     = document.createElement('input')
-    inputName.type      = 'text'
-    inputName.maxLength = 10
-    inputName.value     = game.cfg.name
-    
-    inputName.onchange  = function(e) {
-      game.cfg.name = e.target.value;
-    }
-    
-    
-    nameSpan.appendChild(inputName)
-    div.appendChild(nameSpan)
-  
-  
-    const layerName = ['background', 'static', 'dynamic', 'foreground']
-    // INPUT ROW
-    const rowSpan       = document.createElement('span')
-    rowSpan.innerHTML   = 'Row: '
-    rowSpan.classList.add('dispBlock', 'inputSpan')
-    const inputRows     = document.createElement('input')
-    inputRows.type      = 'number'
-    inputRows.min       = 10
-    inputRows.max       = 500
-    inputRows.value     = game.cfg.rows
-    inputRows.onchange  = function(e) {
-      const newRows     = e.target.value,
-            map         = [];
-  
-      layerName.forEach((name) => {
-        const layer = game[name]
-  
-        for(let j = 0; j < newRows; j++) {
-          if(layer[j]) map[j] = layer[j]
-          else {
-            map[j] = []
-            for(let i = 0; i < game.cfg.cols; i++) {
-              if(name === 'background') map[j][i] = new game.Objects.Block[0](i, j, game)
-              else map[j][i] = 0
-            }
-          }
-        }
-  
-        game[name] = map
-      })
-  
-      game.cfg.rows = Number(newRows)
-      game.cfg.updateAll = true
-      game.translate.x = game.translate.y = 0
-    }
-    rowSpan.appendChild(inputRows)
-    div.appendChild(rowSpan)
-  
-  
-    // INPUT COL
-    const colSpan       = document.createElement('span')
-    colSpan.innerHTML   = 'Col: '
-    colSpan.classList.add('dispBlock', 'inputSpan')
-    const inputCols = document.createElement('input')
-    inputCols.type  = 'number'
-    inputCols.min       = 10
-    inputCols.max       = 1000
-    inputCols.value = game.cfg.cols
-    inputCols.onchange = function(e) {
-      const newCols     = e.target.value
-  
-  
-  
-      layerName.forEach((name) => {
-        const layer = game[name]
-  
-        let map = []
-  
-        for(let j = 0; j < game.cfg.rows; j++) {
+    if(newRows > 500) newRows = e.target.value = 500
+    else if (newRows < 10) newRows = e.target.value = 10
+
+    layerName.forEach((name) => {
+      const layer = game[name],
+            map   = []
+
+      for(let j = 0; j < newRows; j++) {
           map[j] = []
-          for(let i = 0; i < newCols; i++) {
-            if(layer[j][i]) map[j][i] = layer[j][i]
-            else {
-              if(name === 'background') map[j][i] = new game.Objects.Block[0](i, j, game)
-              else map[j][i] = 0
-            }
+          for(let i = 0; i < game.cfg.cols; i++) {
+            if(name === 'background') map[j][i] = new game.Objects.Block[0](i, j, game)
+            else map[j][i] = 0
+          }
+      }
+      game[name] = map
+    })
+
+    game.cfg.rows = Number(newRows)
+    game.cfg.updateAll = true
+    game.translate.x = game.translate.y = 0
+  }
+  rowSpan.appendChild(inputRows)
+  div.appendChild(rowSpan)
+
+
+  // INPUT COL
+  const colSpan      = document.createElement('span')
+  colSpan.innerHTML  = 'Col: '
+  colSpan.classList.add('dispBlock', 'inputSpan')
+  const inputCols    = document.createElement('input')
+  inputCols.type     = 'number'
+  inputCols.min      = 10
+  inputCols.max      = 1000
+  inputCols.value    = game.cfg.cols
+  inputCols.onchange = function(e) {
+    let newCols      = e.target.value
+
+    
+    if(newCols > 500) newCols = e.target.value = 1000
+    else if (newCols < 10) newCols = e.target.value = 10
+
+
+    layerName.forEach((name) => {
+      const layer = game[name]
+
+      let map = []
+
+      for(let j = 0; j < game.cfg.rows; j++) {
+        map[j] = []
+        for(let i = 0; i < newCols; i++) {
+          if(layer[j][i]) map[j][i] = layer[j][i]
+          else {
+            if(name === 'background') map[j][i] = new game.Objects.Block[0](i, j, game)
+            else map[j][i] = 0
           }
         }
-  
-        game[name] = map
-      })
-  
-      game.cfg.cols = Number(newCols)
-      game.cfg.updateAll = true
-      game.translate.x = game.translate.y = 0
+      }
+
+      game[name] = map
+    })
+
+    game.cfg.cols = Number(newCols)
+    game.cfg.updateAll = true
+    game.translate.x = game.translate.y = 0
+  }
+  colSpan.appendChild(inputCols)
+  div.appendChild(colSpan)
+
+
+  // SELECT LAYER
+  const layerType = ['background', 'static', 'dynamic', 'foreground', 'special'],
+        layerBlock = document.createElement('select')
+  layerBlock.id    = 'layerBlock'
+
+  for (var i = 0; i < layerType.length; i++) {
+    const option  = document.createElement("option")
+    option.value  = layerType[i]
+    option.text   = layerType[i]
+    layerBlock.appendChild(option)
+  }
+
+
+  layerBlock.value  = 'static'
+  game.select.layer = 'static'
+
+  layerBlock.style.display = 'block'
+  layerBlock.onchange = (e) => {
+    const id    = e.target.selectedIndex,
+          value = e.target[id].value
+    game.select.layer = value
+
+    document.dispatchEvent(refreshBlockType);
+  }
+  const layerSpan       = document.createElement('span')
+  layerSpan.innerHTML   = 'Layer '
+  layerSpan.classList.add('dispBlock')
+  layerSpan.id          = 'selectSpan'
+  layerSpan.appendChild(layerBlock)
+  div.appendChild(layerSpan)
+
+
+  // SELECT BLOCK
+  const selectSpan       = document.createElement('span')
+  selectSpan.classList.add('dispBlock')
+  selectSpan.id          = 'selectSpan'
+  div.appendChild(selectSpan)
+
+
+
+
+  function makeBlockSelect() {
+    selectSpan.innerHTML = 'Block Type: '
+
+    const selectBlock = document.createElement('select')
+    selectBlock.id = 'selectBlock'
+
+
+    const hasSpawn = typeExist('Spawn', game.static), 
+          hasEnd   = typeExist('End',   game.static);
+
+    let option  = document.createElement("option")
+    selectBlock.appendChild(option)
+    for (var i = 0; i < game.editObjects.length; i++) {
+      const obj   = game.editObjects[i],
+            layer = game.select.layer;
+
+      if (obj[2] != layer) continue
+
+      option  = document.createElement("option")
+      option.value  = obj[0].name
+      option.text   = obj[0].name
+      if(obj[1] === 4 && hasSpawn) option.disabled = true
+      else if(obj[1] === 5 && hasEnd) option.disabled = true
+      selectBlock.appendChild(option)
     }
-    colSpan.appendChild(inputCols)
-    div.appendChild(colSpan)
-  
-  
-    // SELECT LAYER
-    const layerType = ['background', 'static', 'dynamic', 'foreground', 'special'],
-          layerBlock = document.createElement('select')
-    layerBlock.id    = 'layerBlock'
-  
-    for (var i = 0; i < layerType.length; i++) {
-      const option  = document.createElement("option")
-      option.value  = layerType[i]
-      option.text   = layerType[i]
-      layerBlock.appendChild(option)
-    }
-  
-    
-    layerBlock.value  = 'static'
-    game.select.layer = 'static'
-  
-    layerBlock.style.display = 'block'
-    layerBlock.onchange = (e) => {
+
+    selectBlock.style.display = 'block'
+    selectBlock.onchange = (e) => {
       const id    = e.target.selectedIndex,
             value = e.target[id].value
-      game.select.layer = value
-  
-      document.dispatchEvent(refreshBlockType);
+      game.select.block = game.Objects[value]
     }
-    const layerSpan       = document.createElement('span')
-    layerSpan.innerHTML   = 'Layer '
-    layerSpan.classList.add('dispBlock')
-    layerSpan.id          = 'selectSpan'
-    layerSpan.appendChild(layerBlock)
-    div.appendChild(layerSpan)
-  
-  
-    // SELECT BLOCK
-    const selectSpan       = document.createElement('span')
-    selectSpan.classList.add('dispBlock')
-    selectSpan.id          = 'selectSpan'
-    div.appendChild(selectSpan)
-  
-  
-  
-  
-    function makeBlockSelect() {
-      selectSpan.innerHTML = 'Block Type: '
-  
-      const selectBlock = document.createElement('select')
-      selectBlock.id = 'selectBlock'
-    
-    
-      const hasSpawn = typeExist('Spawn', game.static), 
-            hasEnd   = typeExist('End',   game.static);
-    
-      let option  = document.createElement("option")
-      selectBlock.appendChild(option)
-      for (var i = 0; i < game.editObjects.length; i++) {
-        const obj   = game.editObjects[i],
-              layer = game.select.layer;
-    
-        if (obj[2] != layer) continue
-    
-        option  = document.createElement("option")
-        option.value  = obj[0].name
-        option.text   = obj[0].name
-        if(obj[1] === 4 && hasSpawn) option.disabled = true
-        else if(obj[1] === 5 && hasEnd) option.disabled = true
-        selectBlock.appendChild(option)
-      }
-    
-      selectBlock.style.display = 'block'
-      selectBlock.onchange = (e) => {
-        const id    = e.target.selectedIndex,
-              value = e.target[id].value
-        game.select.block = game.Objects[value]
-      }
-  
-      selectSpan.appendChild(selectBlock)
+
+    selectSpan.appendChild(selectBlock)
+  }
+
+  window.refreshBlockType = new Event('refreshBlockType');
+  document.addEventListener('refreshBlockType', makeBlockSelect, false);
+
+  document.dispatchEvent(refreshBlockType);
+
+
+  // BLOCK PARAMS
+
+
+  // LOAD MAP
+  const loadMap = document.createElement('input')
+  loadMap.type = 'text'
+  //div.appendChild(loadMap)
+
+
+  // BUTTON PLAY
+  const btnPlay = document.createElement('input')
+  btnPlay.type = 'button'
+  btnPlay.value = 'Play'
+  btnPlay.classList.add('playBtn')
+  btnPlay.onclick = (e) => {
+    // e.preventDefault()
+
+    const hasSpawn = typeExist('Spawn', game.static),
+          hasEnd   = typeExist('End',   game.static);
+
+    if (!hasSpawn || !hasEnd) {
+      return errorMsg.innerHTML = `You can't play without ${(!hasSpawn) ? 'Spawn' : 'End'} block !`
     }
-  
-    window.refreshBlockType = new Event('refreshBlockType');
-    document.addEventListener('refreshBlockType', makeBlockSelect, false);
-  
-    document.dispatchEvent(refreshBlockType);
-  
-  
-    // BLOCK PARAMS
-  
-  
-    // LOAD MAP
-    const loadMap = document.createElement('input')
-    loadMap.type = 'text'
-    //div.appendChild(loadMap)
-  
-  
-    // BUTTON PLAY
-    const btnPlay = document.createElement('input')
-    btnPlay.type = 'button'
-    btnPlay.value = 'Play'
-    btnPlay.classList.add('playBtn')
-    btnPlay.onclick = (e) => {
-      // e.preventDefault()
-  
-      const hasSpawn = typeExist('Spawn', game.static),
-            hasEnd   = typeExist('End',   game.static);
-  
-      if (!hasSpawn || !hasEnd) {
-        return errorMsg.innerHTML = `You can't play without ${(!hasSpawn) ? 'Spawn' : 'End'} block !`
-      }
-  
-      game.window[game.mode].end()
-      game.mode = 'play'
-  
-  
-      game.init(true)
-      game.cfg.updateAll = true
-      game.canvas.focus()
-      game.window.play.resetTimer()
-      game.Player.hide = false
-      if(!game.playing[0]) {
-        game.playing[0] = true
-        game.resetAnimate = true
-        game.animate()
-      }
-      game.window.play.start()
+
+    game.window[game.mode].end()
+    game.mode = 'play'
+
+
+    game.init(true)
+    game.cfg.updateAll = true
+    game.canvas.focus()
+    game.window.play.resetTimer()
+    game.Player.hide = false
+    if(!game.playing[0]) {
+      game.playing[0] = true
+      game.resetAnimate = true
+      game.animate()
     }
-    div.appendChild(btnPlay)
-  
-  
-  
-  
-    // BUTTON SAVE
-    const btnSave = document.createElement('input')
-    btnSave.type = 'button'
-    btnSave.value = 'Save'
-    btnSave.classList.add('playBtn')
-    btnSave.onclick = (e) => {
+    game.window.play.start()
+  }
+  div.appendChild(btnPlay)
+
+
+
+
+  // BUTTON SAVE
+  const btnSave = document.createElement('input')
+  btnSave.type = 'button'
+  btnSave.value = 'Save'
+  btnSave.classList.add('playBtn')
+  btnSave.onclick = (e) => {
       // e.preventDefault();
-      
+
     if (!game.cfg.name) return errorMsg.innerHTML = `You forgot to set the name !`
-  
+
 
     const hasSpawn = typeExist('Spawn', game.static),
           hasEnd   = typeExist('End',   game.static);
@@ -2953,7 +2940,7 @@ function Game(N, T, M){
     if (!hasSpawn || !hasEnd) {
       return errorMsg.innerHTML = `You can't save without ${(!hasSpawn) ? 'Spawn' : 'End'} block !`
     }
-      
+
     let str = ''
 
     var mapTest = game.static,
@@ -2988,24 +2975,24 @@ function Game(N, T, M){
       // alert('The map has been copied on your clipboard');
   }
   div.appendChild(btnSave)
-  
-  
-  
+
+
+
   const errorMsg  = document.createElement('span')
   errorMsg.classList.add('dispBlock')
   errorMsg.id     = 'errorMsg'
   div.appendChild(errorMsg)
-  
-  
-  
-  
+
+
+
+
   return div
 
 
 
 
-  
-  
+
+
   // FUNCTIONS
   function copyToClipboard(text){
     var dummy = document.createElement("input");
@@ -3015,7 +3002,7 @@ function Game(N, T, M){
     document.execCommand("copy");
     document.body.removeChild(dummy);
   }
-  
+
   function flatten(obj) {
     var result = Object.create(obj);
     result.type = obj.type
@@ -3027,37 +3014,37 @@ function Game(N, T, M){
     }
     return result;
   }
-  
+
   function classToNumber(className) {
     switch(className) {
        case 'Block':
          return 0
-  
+
       case 'Wall':
         return 1
-  
+
       case 'BouncingBox':
         return 2
-  
+
       case 'Spikes':
         return 3
-  
+
       case 'Spawn':
         return 4
-  
+
       case 'End':
         return 5
-  
+
       default:
         return false
       // case 4:
       //   return
-  
+
       // case 5:
       //   return
     }
   }
-  
+
   function typeExist(type, map) {
     for(let row = 0; row < map.length; row++) {
       if(map[row].some(cell => cell.type === type)) return true
