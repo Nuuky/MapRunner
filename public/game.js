@@ -867,7 +867,7 @@
         else if (game.select.block[1] === 4 || game.select.block[1] === 5) {
     
           if(map[gridY-1][gridX].type === 'Wall') {
-            map[gridY-1][gridX] = new game.Objects.Block[0](gridX, gridY-1, game)
+            map[gridY-1][gridX] = 0
             cfg.updateArr.push(... this.game.utils.tileManager.getValue(game, gridX, gridY-1, true, false))
           } else {
             map[gridY-1][gridX] = new game.Objects.Block[0](gridX, gridY-1, game)
