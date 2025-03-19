@@ -186,6 +186,7 @@ class PlayWindow {
         scoreReq.open('POST', '/scoreMap', true);
         scoreReq.setRequestHeader("Content-type", "application/json");
         scoreReq.send(JSON.stringify({ name: this.game.cfg.name, time: this.endTime }));
+        reloadMaps()
     }
 
 
