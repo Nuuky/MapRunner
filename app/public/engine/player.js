@@ -40,23 +40,19 @@ class Player extends Block {
             'ArrowUp': false,
             'Space': false,
             'KeyW': false, // Z or W
-            'up': () => this.ArrowUp || this.Space || this.KeyW,
 
             // Crouch
             'KeyS': false,
             'ArrowDown': false,
             'ShiftLeft': false,
-            'down': () => this.KeyS || this.ArrowDown || this.ShiftLeft,
 
             // Left
             'ArrowRight': false,
             'KeyA': false, // A or Q
-            'left': () => this.ArrowLeft || this.KeyA,
 
             // Right
             'ArrowLeft': false,
             'KeyD': false,
-            'right': () => this.ArrowRight || this.KeyD,
         }
 
         this.collision = {
@@ -167,10 +163,10 @@ class Player extends Block {
             crouching = this.isCrouching,
             maxSpeed = this.maxSpeed,
             accel = this.accel,
-            left = this.keys.left(),
-            up = this.keys.up(),
-            right = this.keys.right(),
-            down = this.keys.down();
+            left = this.keys.ArrowLeft || this.keys.KeyA,
+            up = this.keys.ArrowUp || this.keys.Space || this.keys.KeyW,
+            right = this.keys.ArrowRight || this.keys.KeyD,
+            down = this.keys.ArrowDown || this.keys.ShiftLeft || this.keys.KeyS;
 
 
         if (this.isDead || this.hide) return

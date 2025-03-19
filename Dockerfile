@@ -6,10 +6,6 @@ COPY package.json .
 
 RUN npm install
 
-COPY ./app.js ./
-COPY ./img ./img
-COPY ./map ./map
-COPY ./public ./public
-COPY ./views ./views
+COPY ./app ./
 
 CMD [ "npm", "start" ]
