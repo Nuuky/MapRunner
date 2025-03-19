@@ -146,10 +146,16 @@ app.post('/saveMap', (req, res) => {
 app.post('/scoreMap', (req, res) => {
 	console.log("SCORING MAP...")
 	var name = req.sanitize(req.body.name);
-	var time = (req.body.time > 0) ? true : false
-	if (!time) return console.error(`[SCORE] Something wrong with time: \n${req.body.time}`)
+	var time = req.body.time
+	if ((req.body.time == 0)) return console.error(`[SCORE] Something wrong with time: \n${req.body.time}`)
 
 	// Map.where({ name: name }).updateOne({ $set: { time: req.body.time }}).exec()
+	
+	const maps = fs.readFileSync('./maps.json', 'utf8')
+	const obj = JSON.parse(maps);
+	obj[name]["time"] = time
+	json = JSON.stringify(obj, null, 4);
+	fs.writeFileSync('./maps.json', json, 'utf8');
 	console.log(`[SCORE] New score for ${name}: ${getTime(req.body.time)}`)
 })
 
