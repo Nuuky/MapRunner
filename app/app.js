@@ -56,14 +56,18 @@ app.set('view engine', 'ejs')
 app.get('/', async (req, res) => {
 	console.log("[JOIN] New player")
 
-	const mapFiles = fs.readFileSync('./maps.json', 'utf8')
-	const maps = JSON.parse(mapFiles);
-	res.render('index.ejs', { maps: Object.values(maps) })
+	res.render('index.ejs')
 
 	// Map.find({}, (err, maps) => {    
 	//   if (err) return console.error(err);
 	//   res.render('index.ejs', {maps: maps})
 	// });
+})
+
+app.post('/getMaps', (req, res) => {
+	const mapFiles = fs.readFileSync('./maps.json', 'utf8')
+	const maps = JSON.parse(mapFiles);
+	res.send(JSON.stringify(Object.values(maps)))
 })
 
 app.post('/callMap', (req, res) => {

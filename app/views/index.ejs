@@ -1,77 +1,56 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Map Runner</title>
-  <link rel="stylesheet" type="text/css" href="./css/style-min.css">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Map Runner</title>
+	<link rel="stylesheet" type="text/css" href="./css/style-min.css">
 </head>
+
 <body>
-  <div id="game">
-<!--       <canvas id="canvas" tabindex=1>You browser is too old to use canvas technologies.</canvas> -->
-  </div>
-  <div id="mapList">
-    
-    <div id="loading">
-       <div id="loadBarOut"><div id="loadBarIn"></div></div>
-    </div>
-    
-    <p id="mapTitle" class="map offList">
-      <span class="name">NAME</span> 
-      <span class="size">SIZE</span> 
-      <span class="time">BEST TIME</span>
-    </p>
-    <div id="maps">
-      <% maps.forEach(map => { 
-        function getTime(nb) {
-          nb = Number(nb)
+	<div id="game">
+		<!--       <canvas id="canvas" tabindex=1>You browser is too old to use canvas technologies.</canvas> -->
+	</div>
+	<div id="mapList">
 
-          if(nb === 0) return '00:00:00'
+		<div id="loading">
+			<div id="loadBarOut">
+				<div id="loadBarIn"></div>
+			</div>
+		</div>
+
+		<p id="mapTitle" class="map offList">
+			<span class="name">NAME</span>
+			<span class="size">SIZE</span>
+			<span class="time">BEST TIME</span>
+		</p>
+		<div id="maps"></div>
+		<div id="btns" class="offList">
+			<input id="btnCreate" type="button" value="CREATE">
+			<input id="btnPlay" type="button" value="PLAY" disabled>
+		</div>
+	</div>
 
 
-          var msA = `${nb%1000}`
+	<script type="text/javascript" src="./functions.js"></script>
+	<script type="text/javascript" src="./engine/engine.js"></script>
+	<script type="text/javascript" src="./engine/block.js"></script>
+	<script type="text/javascript" src="./engine/bouncing_box.js"></script>
+	<script type="text/javascript" src="./engine/camera.js"></script>
+	<script type="text/javascript" src="./engine/door.js"></script>
+	<script type="text/javascript" src="./engine/end.js"></script>
+	<script type="text/javascript" src="./engine/player.js"></script>
+	<script type="text/javascript" src="./engine/spawn.js"></script>
+	<script type="text/javascript" src="./engine/spikes.js"></script>
+	<script type="text/javascript" src="./engine/sword.js"></script>
+	<script type="text/javascript" src="./engine/wall.js"></script>
+	<script type="text/javascript" src="./engine/windows.js"></script>
+	<script type="text/javascript" src="./game.js"></script>
+	<script type="text/javascript">
+		reloadMaps()
+	</script>
+</body>
 
-          // // 1000).toFixed(2)
-          if(msA > 1000) msA = ((msA / 1000).toFixed(0)) //* 10
-          else if(msA > 100) msA = ((msA / 1000).toFixed(2)) * 100
-
-          msA = (Math.round(msA) > 100) ? '00' : Math.round(msA)
-
-          var ms  = `${(msA < 10) ? '0' : ''}${msA}`
-          var sec = `${(Math.floor(nb/1000%60) < 10) ? '0' : ''}${Math.floor(nb/1000%60)}`
-          var min = `${(Math.floor(nb/1000/60) < 10) ? '0' : ''}${Math.floor(nb/1000/60)}`
-          return min + ':' + sec + ':' + ms
-        }
-        var theTime = (map.time) ? getTime(map.time) : '--'
-        %>      
-        <p class="map" onclick="checkForClick(this)">
-          <span class="name"><%= map.name %></span> 
-          <span class="size"><%= map.cols %>x<%= map.rows %></span> 
-          <span class="score"><%= theTime %></span>
-        </p>
-      <% }) %>
-    </div>
-    <div id="btns" class="offList">
-      <input id="btnCreate" type="button" value="CREATE" >
-      <input id="btnPlay" type="button" value="PLAY" disabled>
-    </div>
-  </div>
-  
-  
-  <script type="text/javascript" src="./functions.js"></script>
-  <script type="text/javascript" src="./engine/engine.js"></script>
-  <script type="text/javascript" src="./engine/block.js"></script>
-  <script type="text/javascript" src="./engine/bouncing_box.js"></script>
-  <script type="text/javascript" src="./engine/camera.js"></script>
-  <script type="text/javascript" src="./engine/door.js"></script>
-  <script type="text/javascript" src="./engine/end.js"></script>
-  <script type="text/javascript" src="./engine/player.js"></script>
-  <script type="text/javascript" src="./engine/spawn.js"></script>
-  <script type="text/javascript" src="./engine/spikes.js"></script>
-  <script type="text/javascript" src="./engine/sword.js"></script>
-  <script type="text/javascript" src="./engine/wall.js"></script>
-  <script type="text/javascript" src="./engine/windows.js"></script>
-  <script type="text/javascript" src="./game.js"></script>
-  </body>
 </html>

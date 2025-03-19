@@ -574,6 +574,7 @@ function Game(N, T, M, cfg = {
 			divGame = document.getElementById('game');
 		divList.style.display = "block"
 		divGame.style.display = "none"
+		reloadMaps()
 	}
 
 }
