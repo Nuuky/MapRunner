@@ -133,6 +133,7 @@ class Player extends Block {
         this.hasBounced = false
         this.isDead = true
         this.key = 0
+        this.game.window.play.gameReset()
     }
 
     spawn() {
