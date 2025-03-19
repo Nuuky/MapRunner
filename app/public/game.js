@@ -635,7 +635,7 @@ function gameMenu(game) {
 	btnRestart.id = 'btnRestart'
 	btnRestart.type = 'button'
 	btnRestart.classList.add('playBtn')
-	btnRestart.value = 'RESTART'
+	btnRestart.value = 'RESTART (R)'
 	btnRestart.onclick = (e) => {
 		e.preventDefault()
 		game.window.play.gameReset()
