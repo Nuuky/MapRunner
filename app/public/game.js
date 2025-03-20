@@ -638,7 +638,9 @@ function gameMenu(game) {
 	btnRestart.value = 'RESTART (R)'
 	btnRestart.onclick = (e) => {
 		e.preventDefault()
-		game.window.play.gameReset()
+		game.window.play.gameReset();
+		if (game.Player.hide) game.window.play.pauseTimer();
+		div.style.width = 0;
 	}
 	div.append(btnRestart)
 
