@@ -4,6 +4,23 @@
 
 This small game is entirely hand-coded using JavaScript and includes a built-in map editor for easy customization.
 
+## Codesandbox
+You can try a modifyed version live on [codesandbox](https://codesandbox.io/p/sandbox/inspiring-tamas-4nfgrs) ! 
+
+## Controls
+
+- **Jump:**     `W | ArrowUp | Space`
+- **Left:**     `A | ArrowLeft`
+- **Crouch:**   `S | ArrowDown | LShift`
+- **Right:**    `D | ArrowRight`
+- **Restart:**  `R`
+- **Menu:**     `Escape`
+
+## Tips
+You can do a second jump after using a BouncingBox -- It's not a bug, it's a feature ;) ;)
+
+It is possible to slide if you take some speed before crouching.
+
 ## Installation
 This project has been around for a while, so I've created a Dockerfile to streamline the setup with Node:8.
 
